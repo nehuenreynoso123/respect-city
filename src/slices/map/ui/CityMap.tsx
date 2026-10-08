@@ -1,8 +1,8 @@
-import type { CSSProperties } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 
 import { useMapCamera } from '../application/useMapCamera';
 import { markerLayer, type MapMarker } from '../domain/markers';
-import type { Point } from '../domain/view';
+import { toWorld as toWorldDomain, type Point } from '../domain/view';
 
 export interface CityMapProps {
   /** Markers to render (shaped at the app root from mission data). */
@@ -13,6 +13,12 @@ export interface CityMapProps {
   onMapTap?: (world: Point) => void;
   /** Legacy `.pick-mode` class on the viewport (crosshair cursor). */
   pickMode?: boolean;
+  /**
+   * Receives a getter returning the world point at the viewport center
+   * (legacy `openCreateModal(toWorld(center))` for `#btn-new`). The getter
+   * is refreshed on every camera change so callers can store it safely.
+   */
+  onRequestDefaultLocation?: (getter: () => Point | null) => void;
 }
 
 /**
@@ -21,7 +27,13 @@ export interface CityMapProps {
  * (counter-scaled via `--inv` so pins keep a constant screen size) and
  * the map furniture (hint + zoom controls).
  */
-export function CityMap({ markers, onMarkerClick, onMapTap, pickMode }: CityMapProps) {
+export function CityMap({
+  markers,
+  onMarkerClick,
+  onMapTap,
+  pickMode,
+  onRequestDefaultLocation,
+}: CityMapProps) {
   const camera = useMapCamera({ onMapTap });
   const layer = markerLayer(markers, camera.view);
 
@@ -30,6 +42,16 @@ export function CityMap({ markers, onMarkerClick, onMapTap, pickMode }: CityMapP
     transform: `translate(${camera.view.x}px, ${camera.view.y}px) scale(${camera.view.s})`,
     '--inv': String(layer.invScale),
   } as CSSProperties;
+
+  // Push a viewport-center getter bound to the current view (legacy `#btn-new`).
+  useEffect(() => {
+    onRequestDefaultLocation?.(() => {
+      const vp = camera.viewportRef.current;
+      if (!vp) return null;
+      return toWorldDomain(camera.view, vp.clientWidth / 2, vp.clientHeight / 2);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camera.view, onRequestDefaultLocation]);
 
   return (
     <div
@@ -254,7 +276,7 @@ export function CityMap({ markers, onMarkerClick, onMapTap, pickMode }: CityMapP
         </div>
       </div>
 
-      <div id="map-hint">Click anywhere on the map to add a mission</div>
+      <div id="map-hint">{pickMode ? 'Tap the map to set the mission location' : 'Click anywhere on the map to add a mission'}</div>
       <div id="zoom-controls">
         <button id="zoom-in" title="Zoom in" onClick={camera.zoomIn}>
           +

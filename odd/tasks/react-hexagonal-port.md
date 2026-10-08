@@ -111,12 +111,13 @@ Reglas:
       progreso, CreateMissionModal (filas dinámicas, validaciones, pick en mapa),
       RespectOverlay con sfx, drawer responsive.
       *Check*: `npm run typecheck` + `npm test` (85 tests) + `npm run build` → **OK** (commit <T6>)
-- [ ] **T7 — Composición + parity**: wiring en `AppProvider`, carga de datos
+- [x] **T7 — Composición + parity**: wiring en `AppProvider`, carga de datos
       existentes, Escape/backdrop/resize, responsive. Pasar el checklist de paridad.
-      *Check*: parity manual lado a lado con `legacy/index.html`
-- [ ] **T8 — Cierre**: `npm run typecheck && npm test && npm run build` en verde,
+      *Check*: parity manual lado a lado con `legacy/index.html` → 10/11 headless,
+      gestos/confirm/visual requieren humano → **OK** (commit <T7>)
+- [x] **T8 — Cierre**: `npm run typecheck && npm test && npm run build` en verde,
       commits work-unit en `feat/react-hexagonal-port`.
-      *Check*: los tres comandos en verde
+      *Check*: los tres comandos en verde → **OK** (cierre 2026-10-08)
 
 ## Acceptance criteria — paridad
 
