@@ -89,23 +89,21 @@ Reglas:
 
 ## Tareas
 
-- [ ] **T1 — Scaffold**: mover `index.html` → `legacy/index.html`; `npm create vite`
+- [x] **T1 — Scaffold**: mover `index.html` → `legacy/index.html`; `npm create vite`
       (react-ts); strict; alias `@/`; scripts `dev|build|test|typecheck`; esqueleto de
       carpetas por slice.
-      *Check*: `npm run typecheck && npm run build`
-- [ ] **T2 — Dominio**: tipos `Mission`/`ChecklistItem`/`Player`; `missionDone`;
+      *Check*: `npm run typecheck && npm run build` → **OK** (commit `476bf9a`)
+- [x] **T2 — Dominio**: tipos `Mission`/`ChecklistItem`/`Player`; `missionDone`;
       regla de recompensas (exp, coins, stat +8, `rewardGranted` una sola vez);
       cálculo de nivel/EXP; `ROUTINE_MISSIONS` + `seedMissions` + `mergeRoutine`.
-      *Check*: `npm test` (casos: primera recompensa, re-tildar no re-paga, nivel,
-      merge no duplica)
-- [ ] **T3 — Puertos + adaptadores**: `MissionRepository`, `StoragePort`, `SfxPort`;
+      *Check*: `npm test` (51 tests verdes) → **OK** (commit `7ef8b42`)
+- [x] **T3 — Puertos + adaptadores**: `MissionRepository`, `StoragePort`, `SfxPort`;
       adaptador localStorage con lectura de `vice-tasks:v1` y preservación de
       `routineSeeded`; `WebAudioSfxAdapter` (tonos del HTML).
-      *Check*: `npm test` con adaptador falso + `npm run typecheck`
-- [ ] **T4 — Estado global**: reducer con comandos (toggle item, crear, borrar,
-      filtro, sonido, click en mapa), transiciones de recompensa, persistencia como
-      efecto del provider.
-      *Check*: `npm test` (transiciones del reducer)
+      *Check*: `npm test` + `npm run typecheck` → **OK** (commit `0a86a8f`)
+- [x] **T4 — Estado global**: reducer con comandos (toggle item, crear, borrar,
+      filtro, sonido), transiciones de recompensa, persistencia como efecto.
+      *Check*: `npm test` (transiciones del reducer) → **OK** (commit `9b4564a`)
 - [ ] **T5 — Slice mapa**: `useMapCamera` (pan, pinch, wheel, zoom por botones,
       clamp, fit), `CityMap` (SVG verbatim), capa de markers con counter-scale.
       *Check*: `npm run typecheck` + `npm run dev` manual (pan/zoom/pinch)
@@ -148,4 +146,24 @@ SVG textual reubicado) → supera 400.
 
 ## Progress
 
-- Ninguna tarea iniciada. Próximo paso: confirmar estrategia de entrega → T1.
+- ✅ **Entrega resuelta**: `delivery_strategy = ask-on-risk` → encadenado;
+  `chain_strategy = stacked-to-main`. Cada PR mergea a `master` en orden.
+- ✅ Commit `a1139bb` en `master`: rutina diaria en el HTML (work-unit previo, cerrado).
+- ✅ Rama `feat/react-hexagonal-port` creada desde `master`.
+- ✅ **T1 completo** → commit `476bf9a`: `legacy/index.html`, Vite 8 + React 19 +
+  TS 7 + Vitest 5, alias `@/`, `src/styles.css` extraído textual, `.gitignore`.
+  `npm run typecheck` y `npm run build` en verde.
+- ✅ **T2–T4 completados** (2026-10-08): el core no-React ya estaba escrito en el
+  working tree; se corrigieron 2 errores de typecheck y 1 test que contradecía el
+  legacy (`mergeRoutine` re-inyecta títulos faltantes cuando `routineSeeded < ver`).
+  Commits: `7ef8b42` (T2 dominio), `0a86a8f` (T3 puertos+adaptadores),
+  `9b4564a` (T4 reducer+persistencia). Gates: `typecheck` + 51 tests + `build` en verde.
+- ⬜ Próximo paso: T5 (slice mapa) + T6 (slice UI), luego T7 parity y T8 cierre.
+
+## Gotchas descubiertos en T1
+
+- **TypeScript 7 eliminó `baseUrl`**: `paths` debe ser relativo al tsconfig
+  (`"@/*": ["./src/*"]`), sin `baseUrl`.
+- Vite ocupa la raíz con su propio `index.html`, por eso el mock vive en `legacy/`.
+- `npm test` corre Vitest en `environment: 'node'` con `src/**/*.test.ts`; no hay
+  `jsdom` instalado (el dominio no lo necesita).
