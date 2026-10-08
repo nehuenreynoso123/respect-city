@@ -168,8 +168,10 @@ SVG textual reubicado) → supera 400.
   Parity: 10/11 verificables headless; gestos/confirm/visual → humano.
 - ✅ **T8 cierre** (2026-10-08): `typecheck` + 85 tests + `build` en verde sobre
   `feat/react-hexagonal-port` (8 commits, master..HEAD).
-- ⬜ Pendiente humano: parity manual lado a lado (11 ítems) con `npm run dev` vs
-  `legacy/index.html`; decisión de push + PRs (stacked-to-main).
+- ✅ **Entrega cerrada** (2026-10-08): parity manual OK por el usuario; PRs
+  stacked-to-main #1–#5 creados y mergeados a `master` (`6c803e5`); ramas
+  remotas y locales del feature borradas. Gates finales sobre master:
+  `typecheck` + 85 tests + `build` en verde.
 
 ## Gotchas descubiertos en T1
 
