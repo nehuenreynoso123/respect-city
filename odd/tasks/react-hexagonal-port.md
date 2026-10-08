@@ -107,10 +107,10 @@ Reglas:
 - [x] **T5 — Slice mapa**: `useMapCamera` (pan, pinch, wheel, zoom por botones,
       clamp, fit), `CityMap` (SVG verbatim), capa de markers con counter-scale.
       *Check*: `npm run typecheck` + `npm test` (27 tests nuevos) → **OK** (commit <T5>)
-- [ ] **T6 — Slice UI**: HUD, MissionList + filtros, MissionPanel con checklist y
+- [x] **T6 — Slice UI**: HUD, MissionList + filtros, MissionPanel con checklist y
       progreso, CreateMissionModal (filas dinámicas, validaciones, pick en mapa),
       RespectOverlay con sfx, drawer responsive.
-      *Check*: `npm run typecheck`
+      *Check*: `npm run typecheck` + `npm test` (85 tests) + `npm run build` → **OK** (commit <T6>)
 - [ ] **T7 — Composición + parity**: wiring en `AppProvider`, carga de datos
       existentes, Escape/backdrop/resize, responsive. Pasar el checklist de paridad.
       *Check*: parity manual lado a lado con `legacy/index.html`
