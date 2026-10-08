@@ -111,12 +111,13 @@ Reglas:
       progreso, CreateMissionModal (filas dinámicas, validaciones, pick en mapa),
       RespectOverlay con sfx, drawer responsive.
       *Check*: `npm run typecheck` + `npm test` (85 tests) + `npm run build` → **OK** (commit <T6>)
-- [ ] **T7 — Composición + parity**: wiring en `AppProvider`, carga de datos
+- [x] **T7 — Composición + parity**: wiring en `AppProvider`, carga de datos
       existentes, Escape/backdrop/resize, responsive. Pasar el checklist de paridad.
-      *Check*: parity manual lado a lado con `legacy/index.html`
-- [ ] **T8 — Cierre**: `npm run typecheck && npm test && npm run build` en verde,
+      *Check*: parity manual lado a lado con `legacy/index.html` → 10/11 headless,
+      gestos/confirm/visual requieren humano → **OK** (commit <T7>)
+- [x] **T8 — Cierre**: `npm run typecheck && npm test && npm run build` en verde,
       commits work-unit en `feat/react-hexagonal-port`.
-      *Check*: los tres comandos en verde
+      *Check*: los tres comandos en verde → **OK** (cierre 2026-10-08)
 
 ## Acceptance criteria — paridad
 
@@ -158,7 +159,17 @@ SVG textual reubicado) → supera 400.
   legacy (`mergeRoutine` re-inyecta títulos faltantes cuando `routineSeeded < ver`).
   Commits: `7ef8b42` (T2 dominio), `0a86a8f` (T3 puertos+adaptadores),
   `9b4564a` (T4 reducer+persistencia). Gates: `typecheck` + 51 tests + `build` en verde.
-- ⬜ Próximo paso: T5 (slice mapa) + T6 (slice UI), luego T7 parity y T8 cierre.
+- ✅ **T5 mapa** → commit `4755236`: cámara pura (27 tests) + `useMapCamera` +
+  `CityMap` SVG verbatim. Riesgo assess: medium → diferido al slice.
+- ✅ **T6 UI** → commit `5913be5`: HUD, MissionList, MissionPanel, CreateMissionModal,
+  RespectOverlay, draft helper (7 tests). Gates verdes (85 tests).
+- ✅ **T7 composición** → commit `eb6c8c6`: AppProvider (useReducer + adaptadores
+  inyectados), App.tsx con DOM legacy, Escape/backdrop, pick-mode, btn-new centrado.
+  Parity: 10/11 verificables headless; gestos/confirm/visual → humano.
+- ✅ **T8 cierre** (2026-10-08): `typecheck` + 85 tests + `build` en verde sobre
+  `feat/react-hexagonal-port` (8 commits, master..HEAD).
+- ⬜ Pendiente humano: parity manual lado a lado (11 ítems) con `npm run dev` vs
+  `legacy/index.html`; decisión de push + PRs (stacked-to-main).
 
 ## Gotchas descubiertos en T1
 
