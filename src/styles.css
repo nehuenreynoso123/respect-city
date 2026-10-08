@@ -1,0 +1,485 @@
+
+/* ============================================================
+   RESPECT CITY — GTA Vice City / San Andreas themed SPA
+   Palette: deep blue #0d0f18 · neon pink #ff007f
+            cyan #00f3ff · gold #ffd700
+   ============================================================ */
+
+:root{
+  --bg:        #0d0f18;   /* deep night blue */
+  --bg-soft:   #141830;   /* panels */
+  --pink:      #ff007f;   /* neon magenta */
+  --cyan:      #00f3ff;   /* neon cyan */
+  --gold:      #ffd700;   /* GTA gold */
+  --green:     #3dff8a;   /* completion */
+  --text:      #e8ecff;
+  --muted:     #8a91c4;
+  --track:     #232849;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+
+html,body{ height:100%; }
+
+body{
+  background:
+    radial-gradient(ellipse at 50% -20%, #1b1040 0%, transparent 60%),
+    var(--bg);
+  color:var(--text);
+  font-family:'Rajdhani','Segoe UI',system-ui,sans-serif;
+  overflow:hidden;                 /* single-page: no document scroll */
+  -webkit-font-smoothing:antialiased;
+}
+
+button{ font-family:inherit; cursor:pointer; }
+
+/* ------------------------------------------------------------
+   HUD HEADER — player profile + stats bars
+   ------------------------------------------------------------ */
+#hud{
+  position:relative; z-index:30;
+  display:flex; align-items:center; gap:18px;
+  padding:10px 16px;
+  background:linear-gradient(180deg, #171c38 0%, var(--bg) 100%);
+  border-bottom:2px solid var(--pink);
+  box-shadow:0 4px 24px rgba(255,0,127,.35);
+  flex-wrap:wrap;
+}
+
+.logo{
+  font-family:'Bungee',sans-serif;
+  font-size:22px; letter-spacing:1px;
+  color:var(--gold);
+  text-shadow:0 0 12px rgba(255,215,0,.7), 3px 3px 0 var(--pink);
+  user-select:none; white-space:nowrap;
+}
+.logo span{ color:var(--cyan); text-shadow:0 0 12px rgba(0,243,255,.7), 3px 3px 0 #000; }
+
+/* Stat block: label + progress bar */
+.stat{ min-width:130px; flex:1; max-width:220px; }
+.stat-label{
+  display:flex; justify-content:space-between;
+  font-size:12px; font-weight:700; letter-spacing:1.5px;
+  color:var(--muted); text-transform:uppercase; margin-bottom:3px;
+}
+.stat-label b{ color:var(--gold); font-size:13px; }
+
+.bar{
+  height:12px; background:var(--track);
+  border:1px solid #33396b; border-radius:6px; overflow:hidden;
+  position:relative;
+}
+.bar-fill{
+  height:100%; width:0%;
+  border-radius:6px;
+  transition:width .5s cubic-bezier(.22,1,.36,1);
+  box-shadow:0 0 10px currentColor;
+}
+.bar-fill.exp     { background:linear-gradient(90deg,var(--pink),var(--gold)); color:var(--gold); }
+.bar-fill.stamina { background:linear-gradient(90deg,#ff5ea8,var(--pink)); color:var(--pink); }
+.bar-fill.intel   { background:linear-gradient(90deg,#4dd7ff,var(--cyan)); color:var(--cyan); }
+.bar-fill.coins   { background:linear-gradient(90deg,#b8860b,var(--gold)); color:var(--gold); }
+
+.hud-actions{ display:flex; gap:8px; margin-left:auto; }
+
+/* Chunky arcade buttons */
+.btn{
+  background:var(--bg-soft); color:var(--text);
+  border:2px solid var(--cyan); border-radius:6px;
+  padding:8px 14px;
+  font-family:'Bungee',sans-serif; font-size:12px; letter-spacing:1px;
+  text-transform:uppercase;
+  transition:.15s;
+}
+.btn:hover{ background:var(--cyan); color:#031018; box-shadow:0 0 16px rgba(0,243,255,.6); }
+.btn-gold{ border-color:var(--gold); color:var(--gold); }
+.btn-gold:hover{ background:var(--gold); color:#1a1400; box-shadow:0 0 16px rgba(255,215,0,.6); }
+.btn-pink{ border-color:var(--pink); color:var(--pink); }
+.btn-pink:hover{ background:var(--pink); color:#fff; box-shadow:0 0 16px rgba(255,0,127,.6); }
+#btn-list{ display:none; }        /* only on mobile */
+
+/* ------------------------------------------------------------
+   MAIN LAYOUT — sidebar list + map
+   ------------------------------------------------------------ */
+#app{
+  display:flex;
+  height:calc(100vh - 62px);      /* viewport minus HUD */
+}
+
+/* --- Mission list sidebar --- */
+#mission-list{
+  width:290px; flex-shrink:0;
+  background:rgba(13,15,24,.92);
+  border-right:2px solid #232849;
+  display:flex; flex-direction:column;
+  z-index:20;
+}
+.list-head{
+  padding:14px 14px 8px;
+  font-family:'Bungee',sans-serif; font-size:14px;
+  color:var(--cyan); letter-spacing:1px;
+  text-shadow:0 0 8px rgba(0,243,255,.5);
+}
+.filters{ display:flex; gap:6px; padding:0 14px 10px; }
+.chip{
+  font-size:11px; font-weight:700; letter-spacing:1px;
+  padding:4px 10px; border-radius:12px;
+  background:transparent; color:var(--muted);
+  border:1px solid #33396b; text-transform:uppercase;
+}
+.chip.active{ background:var(--pink); color:#fff; border-color:var(--pink); box-shadow:0 0 10px rgba(255,0,127,.5); }
+
+.list-scroll{ overflow-y:auto; flex:1; padding:0 10px 14px; }
+
+.mission-card{
+  display:flex; align-items:center; gap:10px;
+  background:var(--bg-soft);
+  border:1px solid #2a3057; border-left:4px solid var(--muted);
+  border-radius:8px; padding:10px; margin-bottom:8px;
+  cursor:pointer; transition:.15s;
+}
+.mission-card:hover{ border-color:var(--cyan); transform:translateX(3px); }
+.mission-card.selected{ border-color:var(--cyan); box-shadow:0 0 12px rgba(0,243,255,.35); }
+.mission-card.done{ opacity:.55; border-left-color:var(--green); }
+
+.mc-icon{
+  width:36px; height:36px; flex-shrink:0;
+  display:grid; place-items:center; font-size:18px;
+  background:#0a0d1c; border:2px solid var(--muted); border-radius:50%;
+}
+.mc-body{ flex:1; min-width:0; }
+.mc-title{
+  font-weight:700; font-size:14px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis;
+}
+.mc-meta{
+  display:flex; gap:8px; align-items:center;
+  font-size:11px; color:var(--muted); margin-top:2px;
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.mc-respect{ color:var(--gold); font-weight:700; }
+.mc-check{ font-size:16px; color:var(--green); }
+
+.list-empty{
+  text-align:center; color:var(--muted);
+  font-size:13px; padding:30px 16px; line-height:1.6;
+}
+.list-empty b{ color:var(--gold); }
+
+/* --- Map viewport --- */
+#map-viewport{
+  position:relative; flex:1; overflow:hidden;
+  background:#071026;              /* open sea */
+  touch-action:none;              /* enables custom pan/zoom on touch */
+  cursor:grab;
+}
+#map-viewport.dragging{ cursor:grabbing; }
+#map-viewport.pick-mode{ cursor:crosshair; }
+
+/* World holds the SVG map + HTML markers; pan/zoom via one transform */
+#world{
+  position:absolute; top:0; left:0;
+  width:2400px; height:1600px;
+  transform-origin:0 0;
+  --inv:1;                        /* inverse zoom, set by JS to keep marker size */
+}
+#city-map{ position:absolute; inset:0; width:2400px; height:1600px; }
+
+/* --- Mission markers --- */
+#markers{ position:absolute; inset:0; }
+.marker{
+  position:absolute;
+  transform:translate(-50%,-100%) scale(var(--inv));
+  transform-origin:50% 100%;
+  display:flex; flex-direction:column; align-items:center;
+  cursor:pointer; user-select:none;
+}
+.marker-chip{
+  width:44px; height:44px;
+  display:grid; place-items:center; font-size:20px;
+  background:rgba(10,13,28,.92);
+  border:3px solid var(--muted); border-radius:50% 50% 50% 4px;
+  rotate:45deg;                    /* pin drop shape */
+  box-shadow:0 4px 12px rgba(0,0,0,.6);
+  transition:.15s;
+}
+.marker-chip span{ rotate:-45deg; }
+.marker:hover .marker-chip{ transform:scale(1.15); box-shadow:0 0 18px currentColor; }
+.marker.done .marker-chip{ filter:grayscale(.7); opacity:.65; border-color:var(--green); }
+.marker.done::after{
+  content:'✓';
+  position:absolute; top:-6px; right:-6px;
+  width:20px; height:20px; font-size:13px; font-weight:700;
+  background:var(--green); color:#052; border-radius:50%;
+  display:grid; place-items:center;
+}
+.marker .marker-tag{
+  margin-top:6px;
+  font-size:11px; font-weight:700; letter-spacing:.5px;
+  color:#fff; background:rgba(0,0,0,.7);
+  padding:2px 7px; border-radius:4px;
+  white-space:nowrap; max-width:150px; overflow:hidden; text-overflow:ellipsis;
+}
+/* Category accent colors (set inline per marker) */
+.cat-gym   { color:#ff007f; } .cat-gym   .marker-chip{ border-color:#ff007f; }
+.cat-code  { color:#00f3ff; } .cat-code  .marker-chip{ border-color:#00f3ff; }
+.cat-work  { color:#ffd700; } .cat-work  .marker-chip{ border-color:#ffd700; }
+.cat-health{ color:#3dff8a; } .cat-health .marker-chip{ border-color:#3dff8a; }
+
+/* Map furniture */
+#map-hint{
+  position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
+  background:rgba(0,0,0,.72); border:1px solid var(--cyan);
+  color:var(--cyan); padding:7px 16px; border-radius:20px;
+  font-size:12px; font-weight:700; letter-spacing:2px;
+  text-transform:uppercase; pointer-events:none;
+  box-shadow:0 0 14px rgba(0,243,255,.35);
+  z-index:10;
+}
+#zoom-controls{
+  position:absolute; right:14px; bottom:14px;
+  display:flex; flex-direction:column; gap:6px; z-index:10;
+}
+#zoom-controls button{
+  width:38px; height:38px; font-size:18px; font-weight:700;
+  background:rgba(13,15,24,.9); color:var(--cyan);
+  border:2px solid var(--cyan); border-radius:8px;
+}
+#zoom-controls button:hover{ background:var(--cyan); color:#031018; }
+
+/* ------------------------------------------------------------
+   MISSION PANEL (checklist HUD)
+   ------------------------------------------------------------ */
+#mission-panel{
+  position:fixed; top:70px; right:14px; bottom:14px;
+  width:350px; max-width:calc(100vw - 28px);
+  background:rgba(15,18,38,.97);
+  border:2px solid var(--cyan); border-radius:12px;
+  box-shadow:0 0 30px rgba(0,243,255,.3), 0 20px 60px rgba(0,0,0,.6);
+  z-index:40;
+  display:flex; flex-direction:column;
+  transform:translateX(calc(100% + 30px));
+  transition:transform .3s cubic-bezier(.22,1,.36,1);
+}
+#mission-panel.open{ transform:translateX(0); }
+
+.panel-head{
+  display:flex; gap:12px; align-items:flex-start;
+  padding:16px 16px 10px;
+  border-bottom:1px solid #2a3057;
+}
+#panel-icon{
+  width:44px; height:44px; flex-shrink:0;
+  display:grid; place-items:center; font-size:22px;
+  background:#0a0d1c; border:3px solid var(--muted); border-radius:50%;
+}
+.panel-head h2{
+  font-family:'Bungee',sans-serif; font-size:17px; line-height:1.3;
+  color:var(--gold); text-shadow:0 0 10px rgba(255,215,0,.4);
+}
+.panel-meta{
+  display:flex; gap:10px; margin-top:5px;
+  font-size:11px; font-weight:700; letter-spacing:1px;
+  text-transform:uppercase; color:var(--muted);
+}
+.panel-meta .respect{ color:var(--gold); }
+#panel-close{
+  margin-left:auto; background:none; border:none;
+  color:var(--muted); font-size:24px; line-height:1;
+}
+#panel-close:hover{ color:var(--pink); }
+
+.panel-progress{ padding:10px 16px 0; }
+.panel-progress .bar{ height:10px; }
+.panel-progress .bar-fill{ background:linear-gradient(90deg,var(--cyan),var(--green)); color:var(--green); }
+.progress-text{
+  font-size:11px; color:var(--muted); letter-spacing:1px;
+  text-transform:uppercase; margin-top:5px; text-align:right;
+}
+
+#panel-items{ list-style:none; padding:12px 16px; overflow-y:auto; flex:1; }
+.check-item{
+  display:flex; align-items:center; gap:12px;
+  padding:11px 12px; margin-bottom:8px;
+  background:var(--bg-soft); border:1px solid #2a3057;
+  border-radius:8px; cursor:pointer; transition:.15s;
+}
+.check-item:hover{ border-color:var(--pink); }
+.check-item input{ display:none; }         /* custom checkbox below */
+.check-box{
+  width:22px; height:22px; flex-shrink:0;
+  border:2px solid var(--cyan); border-radius:5px;
+  display:grid; place-items:center;
+  font-size:14px; font-weight:700; color:transparent;
+  transition:.15s;
+}
+.check-item input:checked ~ .check-box{
+  background:var(--green); border-color:var(--green); color:#052;
+  box-shadow:0 0 10px rgba(61,255,138,.6);
+}
+.check-item input:checked ~ .check-text{
+  color:var(--muted); text-decoration:line-through;
+}
+.check-text{ font-size:14px; font-weight:600; }
+
+.panel-actions{ padding:12px 16px; border-top:1px solid #2a3057; }
+
+/* ------------------------------------------------------------
+   RESPECT+ FULL-SCREEN CELEBRATION
+   ------------------------------------------------------------ */
+#respect-overlay{
+  position:fixed; inset:0; z-index:100;
+  background:rgba(3,4,10,.88);
+  display:grid; place-items:center;
+  animation:ovl-in .18s ease-out;
+}
+@keyframes ovl-in{ from{opacity:0} to{opacity:1} }
+.respect-inner{ text-align:center; padding:20px; }
+.respect-big{
+  font-family:'Press Start 2P',monospace;
+  font-size:clamp(34px, 8vw, 92px);
+  line-height:1.25;
+  color:var(--gold);
+  text-shadow:
+    0 0 24px rgba(255,215,0,.9),
+    0 0 60px rgba(255,0,127,.7),
+    6px 6px 0 var(--pink);
+  animation:respect-pop .55s cubic-bezier(.18,1.6,.4,1) both,
+            respect-flicker 1.1s .55s steps(2,end) infinite;
+}
+@keyframes respect-pop{
+  0%{ transform:scale(.2) rotate(-6deg); opacity:0; }
+  100%{ transform:scale(1) rotate(0); opacity:1; }
+}
+@keyframes respect-flicker{
+  0%,100%{ opacity:1; } 50%{ opacity:.82; }
+}
+.respect-sub{
+  margin-top:26px;
+  font-family:'Bungee',sans-serif;
+  font-size:clamp(15px,2.6vw,26px);
+  color:var(--cyan); letter-spacing:2px;
+  text-shadow:0 0 14px rgba(0,243,255,.8);
+  animation:respect-sub .5s .3s ease-out both;
+}
+@keyframes respect-sub{ from{ transform:translateY(16px); opacity:0 } to{ transform:none; opacity:1 } }
+.respect-hint{
+  margin-top:34px; font-size:12px; letter-spacing:2px;
+  color:var(--muted); text-transform:uppercase;
+}
+
+/* ------------------------------------------------------------
+   CREATE-MISSION MODAL
+   ------------------------------------------------------------ */
+#modal-backdrop{
+  position:fixed; inset:0; z-index:90;
+  background:rgba(3,4,10,.75);
+  backdrop-filter:blur(3px);
+  display:grid; place-items:center; padding:16px;
+}
+#modal-backdrop.hidden{ display:none; }
+#mission-modal{
+  width:440px; max-width:100%;
+  max-height:90vh; overflow-y:auto;
+  background:var(--bg-soft);
+  border:2px solid var(--pink); border-radius:14px;
+  box-shadow:0 0 40px rgba(255,0,127,.4), 0 30px 80px rgba(0,0,0,.7);
+  padding:22px;
+}
+.modal-title{
+  font-family:'Bungee',sans-serif; font-size:20px;
+  color:var(--pink); letter-spacing:1px;
+  text-shadow:0 0 12px rgba(255,0,127,.6);
+  margin-bottom:18px;
+}
+.field{ margin-bottom:14px; }
+.field label{
+  display:block; font-size:11px; font-weight:700;
+  letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--cyan); margin-bottom:5px;
+}
+.field input[type=text], .field input[type=number], .field select{
+  width:100%; padding:10px 12px;
+  background:#0a0d1c; color:var(--text);
+  border:1px solid #33396b; border-radius:7px;
+  font-family:inherit; font-size:14px; outline:none;
+}
+.field input:focus, .field select:focus{ border-color:var(--cyan); box-shadow:0 0 8px rgba(0,243,255,.4); }
+.field-row{ display:flex; gap:12px; }
+.field-row .field{ flex:1; }
+
+/* Location readout + pick-on-map */
+.loc-box{
+  display:flex; align-items:center; gap:10px;
+  background:#0a0d1c; border:1px dashed #33396b;
+  border-radius:7px; padding:9px 12px;
+}
+#loc-text{ flex:1; font-size:13px; color:var(--muted); letter-spacing:1px; }
+#loc-text.set{ color:var(--green); }
+#btn-pick{
+  background:none; border:1px solid var(--gold);
+  color:var(--gold); border-radius:5px;
+  padding:5px 10px; font-size:10px; font-weight:700;
+  letter-spacing:1px; text-transform:uppercase; white-space:nowrap;
+}
+#btn-pick:hover{ background:var(--gold); color:#1a1400; }
+
+/* Dynamic checklist editor */
+#checklist-rows{ display:flex; flex-direction:column; gap:8px; }
+.cl-row{ display:flex; gap:8px; }
+.cl-row input{ flex:1; }
+.cl-remove{
+  width:38px; flex-shrink:0;
+  background:transparent; color:var(--pink);
+  border:1px solid var(--pink); border-radius:7px;
+  font-size:16px;
+}
+.cl-remove:hover{ background:var(--pink); color:#fff; }
+#btn-add-item{
+  margin-top:8px; width:100%;
+  background:transparent; color:var(--cyan);
+  border:1px dashed var(--cyan); border-radius:7px;
+  padding:8px; font-size:11px; font-weight:700;
+  letter-spacing:1.5px; text-transform:uppercase;
+}
+#btn-add-item:hover{ background:rgba(0,243,255,.12); }
+
+.modal-actions{ display:flex; gap:10px; margin-top:20px; }
+.modal-actions .btn{ flex:1; }
+
+/* ------------------------------------------------------------
+   RESPONSIVE
+   ------------------------------------------------------------ */
+@media (max-width: 860px){
+  #btn-list{ display:block; }              /* show sidebar toggle */
+  #mission-list{
+    position:fixed; top:62px; bottom:0; left:0;
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    width:min(320px,85vw);
+    box-shadow:8px 0 30px rgba(0,0,0,.6);
+  }
+  #mission-list.open{ transform:translateX(0); }
+  #app{ height:calc(100vh - 110px); }      /* HUD wraps to 2 rows on mobile */
+  .stat{ min-width:100px; }
+  .logo{ font-size:17px; }
+  #mission-panel{
+    top:auto; right:0; left:0; bottom:0;
+    width:100%; max-width:100%;
+    height:62vh; border-radius:16px 16px 0 0;
+    transform:translateY(110%);
+  }
+  #mission-panel.open{ transform:translateY(0); }
+}
+@media (max-width: 520px){
+  #hud{ gap:8px; padding:8px 10px; }
+  .stat{ max-width:none; min-width:calc(50% - 30px); }
+  .hud-actions{ margin-left:0; width:100%; }
+  .hud-actions .btn{ flex:1; }
+}
+
+/* Scrollbars, retro flavour */
+::-webkit-scrollbar{ width:9px; }
+::-webkit-scrollbar-track{ background:var(--bg); }
+::-webkit-scrollbar-thumb{ background:#2f3566; border-radius:5px; }
+::-webkit-scrollbar-thumb:hover{ background:var(--pink); }
