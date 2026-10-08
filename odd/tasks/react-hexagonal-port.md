@@ -104,9 +104,9 @@ Reglas:
 - [x] **T4 — Estado global**: reducer con comandos (toggle item, crear, borrar,
       filtro, sonido), transiciones de recompensa, persistencia como efecto.
       *Check*: `npm test` (transiciones del reducer) → **OK** (commit `9b4564a`)
-- [ ] **T5 — Slice mapa**: `useMapCamera` (pan, pinch, wheel, zoom por botones,
+- [x] **T5 — Slice mapa**: `useMapCamera` (pan, pinch, wheel, zoom por botones,
       clamp, fit), `CityMap` (SVG verbatim), capa de markers con counter-scale.
-      *Check*: `npm run typecheck` + `npm run dev` manual (pan/zoom/pinch)
+      *Check*: `npm run typecheck` + `npm test` (27 tests nuevos) → **OK** (commit <T5>)
 - [ ] **T6 — Slice UI**: HUD, MissionList + filtros, MissionPanel con checklist y
       progreso, CreateMissionModal (filas dinámicas, validaciones, pick en mapa),
       RespectOverlay con sfx, drawer responsive.
