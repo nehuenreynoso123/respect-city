@@ -104,10 +104,11 @@ backend/
 
 ## Tareas
 
-- [ ] **T1 — Scaffold backend**: `backend/` con package.json, TS estricto, vitest,
+- [x] **T1 — Scaffold backend**: `backend/` con package.json, TS estricto, vitest,
       zod env, Fastify app mínima + test de health, docker-compose (postgres),
       `.env.example`, scripts root `dev:backend|test:backend|typecheck:backend`.
-      *Check*: `npm run typecheck && npm test && npm run build` en `backend/` → OK
+      *Check*: `npm run typecheck && npm test && npm run build` en `backend/` → **OK**
+      (commit `a3fb7c1`)
 - [ ] **T2 — Dominio portado**: mission (Mission, ChecklistItem, missionDone,
       rewards math) + player (caps, exp/level) + `ROUTINE_MISSIONS` server-side.
       Tests portados desde el front (spec de verdad).
@@ -162,8 +163,22 @@ integración front) → supera 400.
 - ✅ Plan aprobado por el usuario (2026-10-09): cloud sync real + Fastify/hexagonal
   casero/Prisma + alcance sync core.
 - ✅ Rama `feat/backend-core` creada desde `master` (0dc8632).
-- ⬜ T1 en curso.
+- ✅ **T1 completo** → commit `a3fb7c1`: `backend/` con Fastify 5 + TS 7 estricto +
+  Vitest 5 + zod env + Prisma 7.10.0, `docker-compose.yml` (postgres:16),
+  `.env.example`, scripts root. Gates: `typecheck` + 1 test + `build` en verde.
+- ⬜ T2 — dominio portado.
 
 ## Gotchas
 
-- (pendiente de descubrir en T1)
+- **Prisma `latest` apunta a una RC**: en el registro, `prisma` `latest` =
+  `8.0.0-rc.22` (exige Node ≥22.18, tenemos 22.17) mientras `@prisma/client`
+  `latest` = `7.10.0` estable. Se pineó `prisma@^7.10.0` para alinear major.
+- **4 vulns high dev-only** en el árbol del CLI de Prisma (`@prisma/config` →
+  `deepmerge-ts` GHSA-ggr8-5vv4-36mx; `mysql2` que no usamos). No afectan el
+  runtime (`@prisma/client`); el "fix" de npm es un downgrade major a Prisma 6 →
+  se acepta y se documenta.
+- **Sin path alias en el backend**: `tsc` no reescribe `paths` en el emit de ESM,
+  así que `node dist/server.js` rompería con `@/...`. Imports relativos con
+  extensión `.js` (NodeNext). El front mantiene `@/` porque Vite lo resuelve.
+- **`prisma` y `@prisma/client` deben compartir major**: instalar `prisma` por
+  separado puede traerse la RC; pinear ambos a `7.10.0`.
