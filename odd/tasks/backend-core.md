@@ -109,10 +109,10 @@ backend/
       `.env.example`, scripts root `dev:backend|test:backend|typecheck:backend`.
       *Check*: `npm run typecheck && npm test && npm run build` en `backend/` → **OK**
       (commit `a3fb7c1`)
-- [ ] **T2 — Dominio portado**: mission (Mission, ChecklistItem, missionDone,
+- [x] **T2 — Dominio portado**: mission (Mission, ChecklistItem, missionDone,
       rewards math) + player (caps, exp/level) + `ROUTINE_MISSIONS` server-side.
       Tests portados desde el front (spec de verdad).
-      *Check*: `npm test` en `backend/` → OK
+      *Check*: `npm test` en `backend/` → **OK** (20 tests, 5 files · commit `c68c3ae`)
 - [ ] **T3 — Prisma + adaptadores**: schema (User, Player, Mission, MissionItem),
       migración, seed de rutina; repositorios Prisma contra los ports.
       *Check*: `npm run prisma:generate` + `npm test` + `typecheck` → OK
@@ -166,7 +166,11 @@ integración front) → supera 400.
 - ✅ **T1 completo** → commit `a3fb7c1`: `backend/` con Fastify 5 + TS 7 estricto +
   Vitest 5 + zod env + Prisma 7.10.0, `docker-compose.yml` (postgres:16),
   `.env.example`, scripts root. Gates: `typecheck` + 1 test + `build` en verde.
-- ⬜ T2 — dominio portado.
+- ✅ **T2 completo** → commit `c68c3ae`: dominio portado del front 1:1
+  (`mission/domain`: types, categories, ids, missionDone, rewards, routine;
+  `player/domain`: player, reward, level) + tests. Gates: `typecheck` +
+  20 tests (5 files) en verde.
+- ⬜ T3 — Prisma + adaptadores.
 
 ## Gotchas
 
