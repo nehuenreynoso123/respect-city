@@ -113,9 +113,11 @@ backend/
       rewards math) + player (caps, exp/level) + `ROUTINE_MISSIONS` server-side.
       Tests portados desde el front (spec de verdad).
       *Check*: `npm test` en `backend/` → **OK** (20 tests, 5 files · commit `c68c3ae`)
-- [ ] **T3 — Prisma + adaptadores**: schema (User, Player, Mission, MissionItem),
-      migración, seed de rutina; repositorios Prisma contra los ports.
-      *Check*: `npm run prisma:generate` + `npm test` + `typecheck` → OK
+- [x] **T3 — Prisma + adaptadores**: schema (User, Player, Mission, MissionItem),
+      migración inicial generada offline, `prisma.config.ts` + driver adapter pg;
+      `StateRepository` (agregado player+missions) + `PrismaStateRepository`.
+      *Check*: `npm run prisma:generate` + `npm test` + `typecheck` + `build` → **OK**
+      (commit pendiente)
 - [ ] **T4 — Auth**: register/login (bcryptjs + jsonwebtoken), guard JWT en rutas
       protegidas.
       *Check*: tests de use cases + rutas vía `app.inject()` → OK
@@ -170,7 +172,21 @@ integración front) → supera 400.
   (`mission/domain`: types, categories, ids, missionDone, rewards, routine;
   `player/domain`: player, reward, level) + tests. Gates: `typecheck` +
   20 tests (5 files) en verde.
-- ⬜ T3 — Prisma + adaptadores.
+- ✅ **T3 completo** → commit `315ff49`: schema Prisma (4 tablas, cascade), migración
+  `20261009224308_init` generada offline, `prisma.config.ts` + `@prisma/adapter-pg`,
+  `StateRepository` + `PrismaStateRepository` (agregado por usuario, `save()` atómico
+  upsert/delete). Gates: `prisma:generate` + `typecheck` + 20 tests + `build` verde.
+- ⬜ T4 — auth.
+
+## Decisiones de diseño (cambios respecto del plan original)
+
+- **`StateRepository` en vez de repos por módulo**: el plan original separaba
+  `PrismaMissionRepository` de `PrismaPlayerRepository`. El toggle + grant de
+  recompensa exige atomicidad entre misión y player, y la API devuelve el blob
+  completo (`PersistedState`) — así que el agregado persistido es **toda la
+  partida por usuario** (player + missions), espejando el `MissionRepository`
+  del front. Métodos CRUD del puerto: `findByUser`, `create`, `save` (upsert
+  atómico + delete de missions ausentes).
 
 ## Gotchas
 
@@ -186,3 +202,16 @@ integración front) → supera 400.
   extensión `.js` (NodeNext). El front mantiene `@/` porque Vite lo resuelve.
 - **`prisma` y `@prisma/client` deben compartir major**: instalar `prisma` por
   separado puede traerse la RC; pinear ambos a `7.10.0`.
+- **Prisma 7 rompió el setup clásico**: `url` en el datasource del schema ya no
+  existe. La conexión de Migrate/Studio vive en `prisma.config.ts`
+  (`defineConfig({ datasource: { url } })`) y el runtime usa driver adapter
+  (`new PrismaClient({ adapter: new PrismaPg({ connectionString }) })`,
+  `@prisma/adapter-pg` + `pg`). El CLI requiere `dotenv` para leer `.env` en
+  `prisma.config.ts`.
+- **`prisma migrate diff` cambió el flag**: `--to-schema-datamodel` no existe en
+  Prisma 7; es `--to-schema`.
+- **Migración offline**: con el daemon de Docker caído, la migración
+  `20261009224308_init` se generó con `migrate diff --from-empty --to-schema
+  --script -o`. Pendiente para cuando haya Docker: `npm run prisma:deploy`
+  (aplica la migración a Postgres) + tests de integración reales de
+  `PrismaStateRepository` (por ahora cubierto por typecheck/generación).
