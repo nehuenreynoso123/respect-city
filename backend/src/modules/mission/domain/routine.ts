@@ -14,10 +14,11 @@ export interface RoutineTemplate {
   items: string[];
 }
 
+/** Mission coordinates mirror the frontend map layout (src/slices/mission/routine.ts). */
 export const ROUTINE_MISSIONS: RoutineTemplate[] = [
   {
     title: 'Bloque 1 · Backend profundo (90 min)',
-    category: 'code', x: 600, y: 980, respect: 300,
+    category: 'code', x: 1000, y: 640, respect: 300,
     items: [
       'Teoría 30% — un solo concepto, ~25 min',
       'Código 70% — escribir código, ~65 min (sin teoría los 90)',
@@ -29,7 +30,7 @@ export const ROUTINE_MISSIONS: RoutineTemplate[] = [
   },
   {
     title: 'Bloque 2 · Proyecto Backend (90 min)',
-    category: 'code', x: 1150, y: 1150, respect: 350,
+    category: 'code', x: 760, y: 1160, respect: 350,
     items: [
       'UN solo proyecto, no cinco — algo parecido a un backend real',
       'Stack base: Node.js · TypeScript · PostgreSQL · REST API · JWT',
@@ -42,7 +43,7 @@ export const ROUTINE_MISSIONS: RoutineTemplate[] = [
   },
   {
     title: 'Bloque 3 · Entrevistas (45 min)',
-    category: 'work', x: 1620, y: 1000, respect: 250,
+    category: 'work', x: 1620, y: 860, respect: 250,
     items: [
       '15 min — preguntas técnicas EN VOZ ALTA',
       'Tema: event loop · Promise.all vs Promise.allSettled · errores',
@@ -55,7 +56,7 @@ export const ROUTINE_MISSIONS: RoutineTemplate[] = [
   },
   {
     title: 'Bloque 4 · Búsqueda laboral (60 min)',
-    category: 'work', x: 1980, y: 950, respect: 200,
+    category: 'work', x: 1980, y: 940, respect: 200,
     items: [
       '20 min — 3 a 5 postulaciones BUENAS (nada de 30 aplicaciones automáticas)',
       'Buscar: Senior/Sr Backend · Node.js Developer · Backend Engineer',
@@ -67,7 +68,7 @@ export const ROUTINE_MISSIONS: RoutineTemplate[] = [
   },
   {
     title: 'Bloque 5 · IA aplicada al desarrollo (30 min)',
-    category: 'code', x: 980, y: 500, respect: 150,
+    category: 'code', x: 560, y: 400, respect: 150,
     items: [
       'Posicionamiento: Senior Backend que usa AI/agents (no AI Engineer ahora)',
       'Practicar: coding agents · tool calling · workflows',
@@ -82,15 +83,15 @@ export const ROUTINE_MISSIONS: RoutineTemplate[] = [
 export function seedMissions(): Mission[] {
   return [
     {
-      id: uid(), title: 'Morning Workout', category: 'gym', x: 640, y: 640, respect: 150,
+      id: uid(), title: 'Morning Workout', category: 'gym', x: 2010, y: 380, respect: 150,
       items: [it('Run 20 minutes'), it('Push-ups 3 × 15'), it('Stretch 5 minutes')],
     },
     {
-      id: uid(), title: 'Ship Login Feature', category: 'code', x: 1240, y: 740, respect: 300,
+      id: uid(), title: 'Ship Login Feature', category: 'code', x: 1080, y: 700, respect: 300,
       items: [it('Define API contract'), it('Implement endpoint'), it('Write unit tests')],
     },
     {
-      id: uid(), title: 'Drink 2L of Water', category: 'health', x: 1900, y: 700, respect: 60,
+      id: uid(), title: 'Drink 2L of Water', category: 'health', x: 1990, y: 1180, respect: 60,
       items: [
         it('2 glasses — morning'), it('2 glasses — midday'),
         it('2 glasses — afternoon'), it('2 glasses — evening'),
