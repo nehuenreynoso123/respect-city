@@ -9,7 +9,11 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dev:backend": "npm --prefix backend run dev",
+    "test:backend": "npm --prefix backend run test",
+    "typecheck:backend": "npm --prefix backend run typecheck",
+    "build:backend": "npm --prefix backend run build"
   },
   "dependencies": {
     "react": "^19.3.0",
