@@ -68,6 +68,7 @@ Forecast: **~150–250 líneas** (Dockerfiles + config + compose) → por debajo
   `backend/.dockerignore`, `Dockerfile`, `.dockerignore`, `nginx.conf`,
   `docker-compose.yml`. RDD: off → verificación ordinaria. Lectura estructural de
   los 6 archivos + spot check `docker compose config --services` → PASS.
+  Commit `ad60459` en `feat/backend-core` (pusheado a `origin`).
 - ⚠️ **Build de imágenes NO verificado**: el daemon de Docker está caído en este
   entorno. Pendiente `docker compose up --build` cuando el daemon esté arriba.
 
