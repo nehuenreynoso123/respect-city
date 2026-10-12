@@ -1,4 +1,5 @@
 import type { CategoryKey } from '../domain/categories';
+import type { MethodKey } from '../domain/methods';
 import type { Filter } from './state';
 
 /**
@@ -14,6 +15,7 @@ export interface MissionInput {
   // Form values arrive as strings; legacy parses with parseInt(...) || 100
   respect: number | string;
   items: { id: string; text: string }[];
+  method?: MethodKey;
 }
 
 export type AppCommand =
