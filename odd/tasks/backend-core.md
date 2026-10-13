@@ -127,9 +127,11 @@ backend/
       *Check*: `prisma:generate` + `typecheck` + `test` (66 tests, 16 files, incl.
       integración real) + `build` → **OK** (commits `cc04f5e`, `c694ffe`; assess
       medium → verificación ordinaria, sin review)
-- [ ] **T6 — HTTP final**: rutas de missions + state + sound, error handler,
+- [x] **T6 — HTTP final**: rutas de missions + state + sound, error handler,
       envelope de error, respuesta `PersistedState` en cada mutación.
-      *Check*: `app.inject()` E2E auth→state→mutaciones + gates → OK
+      *Check*: `typecheck` + `test` (79 tests, 18 files, incl. E2E `app.inject()`
+      auth→state→mutaciones) + `build` → **OK** (commits `fc3ae64`, `08d417b`;
+      assess medium → verificación ordinaria, sin review)
 - [ ] **T7 — Frontend**: slice `auth/` (login/register), `HttpMissionRepository`
       como adaptador del puerto existente, reconciliación optimista en
       `AppProvider`, logout.
@@ -198,7 +200,18 @@ integración front) → supera 400.
   caps 100, math del front). Tests: 66 (16 files) incl. integración real
   `PrismaStateRepository.integration.test.ts` contra el Postgres de compose —
   cierra el pendiente de T3.
-- ⬜ T6 — HTTP final.
+- ✅ **T6 completo** → commits `fc3ae64` + `08d417b`: `getOrCreateState` (seedea
+  demo + rutina en el primer `GET /api/state` — no en register — y corre
+  `mergeRoutine` en CADA lectura persistiendo solo si cambió, igual que el boot
+  del front); rutas `GET /api/state` + `PATCH /api/sound` (state/http) y
+  `POST /api/missions` (201) + `DELETE /api/missions/:missionId` +
+  `POST /api/missions/:missionId/items/:itemId/toggle` (mission/http), todas con
+  guard JWT y respuesta = `PersistedState` completo; body zod shape-only
+  (reglas de negocio siguen en los use cases como única fuente de codes);
+  `setNotFoundHandler` con el envelope `{ error }`. Tests: 79 (18 files) incl.
+  E2E `api.e2e.test.ts` (auth→state→mutaciones, 401 por ruta, aislamiento entre
+  cuentas, sin doble grant, 404 envelope).
+- ⬜ T7 — Frontend.
 
 ## Decisiones de diseño (cambios respecto del plan original)
 
@@ -226,6 +239,25 @@ integración front) → supera 400.
   `state-not-found` 404 si la cuenta aún no tiene estado. El seeding (demo +
   rutina) llega en T6 — el register (T4) queda sin seeding para no tocar un
   módulo ya cerrado.
+- **Seeding en el primer `GET /api/state`, no en register (T6)**: el plan decía
+  "seedea al crear la cuenta"; se implementó en `getOrCreateState` (lazy, primer
+  acceso) para no tocar el register de T4. Contrato resultante: una cuenta sin
+  estado recibe 404 `state-not-found` en los comandos hasta que alguien pida
+  `/api/state` — el front hace ese GET en el boot, así que en la práctica el
+  seed ocurre antes de cualquier mutación (E2E usa un helper `registerAndSeed`).
+- **`mergeRoutine` en cada lectura (T6)**: espeja `load()` del front — el
+  mismo ref se devuelve cuando `routineSeeded >= ROUTINE_VERSION`, así que el
+  persist solo corre cuando la rutina realmente cambió (listo para futuros
+  bumps de `ROUTINE_VERSION` sin migrar datos).
+- **Validación shape-only en las rutas (T6)**: el zod de HTTP valida forma
+  (ids no vacíos, tipos, enums de categoría/método derivados de
+  `Object.keys(CATEGORIES|METHODS)`); los errores de negocio (missing-title,
+  missing-items, missing-location) siguen saliendo de los use cases con sus
+  codes/mensajes originales del front — una sola fuente de verdad.
+- **Envelope 404 de rutas huérfanas (T6)**: `setNotFoundHandler` devuelve
+  `{ error: { code: 'not-found', message: 'Route not found.' } }` para que TODA
+  respuesta de error use el mismo contenedor. Falta `request-id` (deferido: no
+  lo exige la v1 y el handler de error ya loguea el request).
 - **Raza teórica del toggle (deferida a v2)**: read→muta→save es atómico por
   agregado (`save()` transaccional del repo, upsert + delete en una
   transacción), pero dos toggles concurrentes en la misma misión podrían leer
