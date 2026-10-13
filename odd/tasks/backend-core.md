@@ -234,7 +234,16 @@ integración front) → supera 400.
   logout/rollback/401 (el overlay no debe resurgir ni mentir tras un fallo),
   `adoptSession` persiste el token SOLO tras cargar el estado (sin sesión a
   medias), y 401/403 sin envelope → `code: 'unauthorized'` (proxies/gateways).
-- ⬜ T8 — Cierre.
+- ✅ **T8 completo** (2026-10-13): gates front + back en verde en ambas raíces
+      (typecheck + 102 tests/16 files + build front; typecheck + 79 tests/18 files
+      incl. integración real + build back; Postgres de compose levantado y
+      reconstruido, Dockerfiles front+back compilan dentro de imágenes) + entrega:
+      stack de **7 PRs stacked-to-main** (#6–#12) creados y pusheados a `origin`
+      con `type:feature` — slices por unidad de trabajo: T1–T3, map-redesign,
+      dockerize-stack, learning-methods, T4-auth, T5–T6, T7-front; cada PR con
+      diagrama de dependencias 📍, límites de commits, budget y plan de
+      verificación. Pendiente humano: smoke manual de parity en navegador
+      (acceptance 7) y merge de los PRs en orden.
 
 ## Decisiones de diseño (cambios respecto del plan original)
 
