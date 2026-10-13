@@ -132,10 +132,13 @@ backend/
       *Check*: `typecheck` + `test` (79 tests, 18 files, incl. E2E `app.inject()`
       auth→state→mutaciones) + `build` → **OK** (commits `fc3ae64`, `08d417b`;
       assess medium → verificación ordinaria, sin review)
-- [ ] **T7 — Frontend**: slice `auth/` (login/register), `HttpMissionRepository`
+- [x] **T7 — Frontend**: slice `auth/` (login/register), `HttpMissionRepository`
       como adaptador del puerto existente, reconciliación optimista en
       `AppProvider`, logout.
-      *Check*: gates front en verde + parity de comandos manual → OK
+      *Check*: gates front en verde (typecheck + 102 tests/16 files + build) +
+      parity de comandos (anti-cheat server+client, sin doble grant) → **OK**
+      (commits `2b22ff5`, `8ae341e`, `27f941d` + fix `7cbcc45`; assess high
+      hot_path auth → verificación ordinaria + verificador independiente)
 - [ ] **T8 — Cierre**: gates front + back en verde, PRs stacked-to-main,
       cierre del doc.
       *Check*: `typecheck` + `test` + `build` en ambas raíces → OK
@@ -211,7 +214,27 @@ integración front) → supera 400.
   `setNotFoundHandler` con el envelope `{ error }`. Tests: 79 (18 files) incl.
   E2E `api.e2e.test.ts` (auth→state→mutaciones, 401 por ruta, aislamiento entre
   cuentas, sin doble grant, 404 envelope).
-- ⬜ T7 — Frontend.
+- ✅ **T7 completo** → commits `2b22ff5` + `8ae341e` + `27f941d` (+ fix
+  `7cbcc45`): slice `auth/` hexagonal (domain types, AuthRepository port,
+  `HttpAuthAdapter` fetch + bearer, token en `StoragePort` bajo
+  `respect-city:token`, `AuthScreen` login/register con toggle y error inline);
+  puerto `GameRepository` async por comandos (`load`→GET /api/state,
+  `createMission`, `deleteMission`, `toggleItem`, `toggleSound`) con
+  `HttpGameRepository`; comando `replaceState` en el reducer (preserva
+  selectedId/filter); `AppProvider` con gate de sesión (`loading`|`guest`|
+  `authenticated`), boot valida token vía `GET /api/me` antes de hidratar,
+  login/register/logout, y pipeline optimista (`mutationOf` puro + test):
+  dispatch local → API → `replaceState` con el estado autoritativo, rollback al
+  snapshot pre-comando + notice en fallo, 401 → limpia token y vuelve a guest;
+  `App.tsx` gatea splash/AuthScreen/ciudad + `NoticeBar` + `HUD.onLogout`
+  opcional; proxy dev `/api` → :3000 en vite (sin CORS server-side);
+  eliminación del boot local-first muerto (`load`/`LocalStorageMissionRepository`/
+  `persistence`/`alignMapPositions` + tests). Tests: 102 (16 files). El fix
+  `7cbcc45` (hallazgos del verificador independiente): limpia `celebration` en
+  logout/rollback/401 (el overlay no debe resurgir ni mentir tras un fallo),
+  `adoptSession` persiste el token SOLO tras cargar el estado (sin sesión a
+  medias), y 401/403 sin envelope → `code: 'unauthorized'` (proxies/gateways).
+- ⬜ T8 — Cierre.
 
 ## Decisiones de diseño (cambios respecto del plan original)
 
@@ -258,6 +281,32 @@ integración front) → supera 400.
   `{ error: { code: 'not-found', message: 'Route not found.' } }` para que TODA
   respuesta de error use el mismo contenedor. Falta `request-id` (deferido: no
   lo exige la v1 y el handler de error ya loguea el request).
+- **El puerto `MissionRepository` sync no mapea la API granular (T7)**: el
+  plan decía "mismo puerto, cambia el adaptador", pero el puerto era
+  `load()/save(blob)` local-first y la API es de comandos (no hay endpoint
+  "guardar todo"). Se reemplazó por `GameRepository` async por comandos
+  (`load/createMission/deleteMission/toggleItem/toggleSound` → `PersistedState`)
+  y se eliminó todo el boot local-first (`load.ts`, `LocalStorageMissionRepository`,
+  `persistence.ts`, `alignMapPositions`). `freshAppState()` queda como estado
+  inicial del reducer.
+- **Token persistido en localStorage + validación en boot (T7)**: la
+  restricción 8 ("en memoria") se interpretó con la decisión de T4 (`GET /api/me`
+  para "validar el token guardado antes de pedir el estado"): el access token se
+  guarda en `localStorage` (`respect-city:token` vía `StoragePort`) y el boot
+  valida con `me()` antes de hidratar. Sin refresh; tradeoff XSS documentado en
+  la restricción 8; hardening httpOnly → v2. `adoptSession` persiste el token
+  solo tras cargar el estado (fix `7cbcc45`).
+- **Reconciliación optimista con rollback (T7)**: cada mutación se despacha
+  local (UX instantánea + sfx/celebration) y luego se adopta el estado
+  autoritativo vía `replaceState` (sin merge); en fallo → rollback al snapshot
+  pre-comando + notice; 401 → limpiar token y volver a guest. El reducer del
+  front ya grantea solo en `firstGrant` (como el server), así que el overlay
+  "REWARD ALREADY CLAIMED" sale sin doble grant (parity). Raza documentada:
+  late responses de mutaciones concurrentes pueden pisarse (aceptado v1,
+  un usuario/un device; ver raza del toggle backend).
+- **Sin CORS (T7)**: proxy dev de Vite `/api` → `http://localhost:3000`, y
+  `VITE_API_URL` para absoluto (tests). `400`/`404` sin envelope → `unknown`
+  (única excepción: 401/403 → `unauthorized`, fix `7cbcc45`).
 - **Raza teórica del toggle (deferida a v2)**: read→muta→save es atómico por
   agregado (`save()` transaccional del repo, upsert + delete en una
   transacción), pero dos toggles concurrentes en la misma misión podrían leer
