@@ -117,10 +117,11 @@ backend/
       migración inicial generada offline, `prisma.config.ts` + driver adapter pg;
       `StateRepository` (agregado player+missions) + `PrismaStateRepository`.
       *Check*: `npm run prisma:generate` + `npm test` + `typecheck` + `build` → **OK**
-      (commit pendiente)
-- [ ] **T4 — Auth**: register/login (bcryptjs + jsonwebtoken), guard JWT en rutas
+      (commit `315ff49`)
+- [x] **T4 — Auth**: register/login (bcryptjs + jsonwebtoken), guard JWT en rutas
       protegidas.
-      *Check*: tests de use cases + rutas vía `app.inject()` → OK
+      *Check*: `typecheck` + `build` + 37 tests (10 files) + rutas vía `app.inject()`
+      → **OK** (commit `c0323a1`)
 - [ ] **T5 — Comandos autoritativos**: create/delete/toggle/sound con anti-cheat
       transaccional (rewardGranted once, caps, math portado del front).
       *Check*: tests de aplicación con repos fakes + integración → OK
@@ -176,7 +177,15 @@ integración front) → supera 400.
   `20261009224308_init` generada offline, `prisma.config.ts` + `@prisma/adapter-pg`,
   `StateRepository` + `PrismaStateRepository` (agregado por usuario, `save()` atómico
   upsert/delete). Gates: `prisma:generate` + `typecheck` + 20 tests + `build` verde.
-- ⬜ T4 — auth.
+- ✅ **T4 completo** → commit `c0323a1`: `auth/` con `domain/user` (normalize,
+  validación email/password), `application/register|login` (AuthResponse
+  `{ user, accessToken }`), puertos `UserRepository|PasswordHasher|TokenService`,
+  adaptadores `PrismaUserRepository|BcryptPasswordHasher|JwtTokenService`, rutas
+  `POST /api/auth/register` (201) + `POST /api/auth/login` (200) + `GET /api/me`
+  protegida por `requireAuth`. `DomainError` + error handler en `app.ts` como
+  composition root con adaptadores inyectables. Gates: `typecheck` + `build` +
+  37 tests (10 files) verde.
+- ⬜ T5 — comandos autoritativos.
 
 ## Decisiones de diseño (cambios respecto del plan original)
 
@@ -187,6 +196,14 @@ integración front) → supera 400.
   partida por usuario** (player + missions), espejando el `MissionRepository`
   del front. Métodos CRUD del puerto: `findByUser`, `create`, `save` (upsert
   atómico + delete de missions ausentes).
+- **`GET /api/me` fuera del plan original (T4)**: se agregó una ruta protegida
+  mínima para tener un caso real de guard JWT testeable de punta a punta con
+  `app.inject()`, sin esperar a las rutas de `state` (T6). El front la usará en
+  T7 para validar el token guardado antes de pedir el estado.
+- **`requireAuth` como factory**: el guard se construye con el `TokenService`
+  inyectado (`requireAuth(tokens)`) y devuelve un `preHandlerAsyncHookHandler`.
+  El `userId` se decora en el request (`decorateRequest('userId', null)`) y se
+  tipa por module augmentation en `guard.ts`.
 
 ## Gotchas
 
