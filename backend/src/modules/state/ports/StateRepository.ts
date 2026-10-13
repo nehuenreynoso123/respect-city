@@ -3,12 +3,15 @@ import type { Player } from '../../player/domain/player.js';
 
 /**
  * The game state owned by one account: exactly the legacy `vice-tasks:v1`
- * persisted slice (player + missions). The frontend and the API both treat it
- * as a single blob, so the aggregate is persisted (and replaced) atomically.
+ * persisted slice (player + missions + sound + routineSeeded). The frontend
+ * and the API both treat it as a single blob, so the aggregate is persisted
+ * (and replaced) atomically.
  */
 export interface PersistedGameState {
   player: Player;
   missions: Mission[];
+  sound: boolean;
+  routineSeeded: number;
 }
 
 export interface StateRepository {

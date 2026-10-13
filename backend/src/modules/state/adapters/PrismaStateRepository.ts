@@ -26,13 +26,26 @@ export class PrismaStateRepository implements StateRepository {
       orderBy: { createdAt: 'asc' },
       include: { items: { orderBy: { position: 'asc' } } },
     });
-    return { player: toPlayer(player), missions: missions.map(toMission) };
+    return {
+      player: toPlayer(player),
+      missions: missions.map(toMission),
+      sound: player.sound,
+      routineSeeded: player.routineSeeded,
+    };
   }
 
   async create(userId: string, state: PersistedGameState): Promise<void> {
     await this.db.$transaction(async tx => {
       await tx.player.create({
-        data: { userId, exp: state.player.exp, stamina: state.player.stamina, intel: state.player.intel, coins: state.player.coins },
+        data: {
+          userId,
+          exp: state.player.exp,
+          stamina: state.player.stamina,
+          intel: state.player.intel,
+          coins: state.player.coins,
+          sound: state.sound,
+          routineSeeded: state.routineSeeded,
+        },
       });
       for (const mission of state.missions) {
         await tx.mission.create({ data: toMissionCreate(userId, mission) });
@@ -45,8 +58,23 @@ export class PrismaStateRepository implements StateRepository {
     await this.db.$transaction(async tx => {
       await tx.player.upsert({
         where: { userId },
-        create: { userId, exp: state.player.exp, stamina: state.player.stamina, intel: state.player.intel, coins: state.player.coins },
-        update: { exp: state.player.exp, stamina: state.player.stamina, intel: state.player.intel, coins: state.player.coins },
+        create: {
+          userId,
+          exp: state.player.exp,
+          stamina: state.player.stamina,
+          intel: state.player.intel,
+          coins: state.player.coins,
+          sound: state.sound,
+          routineSeeded: state.routineSeeded,
+        },
+        update: {
+          exp: state.player.exp,
+          stamina: state.player.stamina,
+          intel: state.player.intel,
+          coins: state.player.coins,
+          sound: state.sound,
+          routineSeeded: state.routineSeeded,
+        },
       });
 
       // Missions no longer present are gone for good (items cascade).
@@ -65,6 +93,7 @@ export class PrismaStateRepository implements StateRepository {
             y: mission.y,
             respect: mission.respect,
             rewardGranted: mission.rewardGranted ?? false,
+            method: mission.method ?? null,
           },
         });
 
@@ -94,6 +123,7 @@ function toMissionCreate(userId: string, m: Mission): PrismaMissionCreateInput {
     y: m.y,
     respect: m.respect,
     rewardGranted: m.rewardGranted ?? false,
+    method: m.method ?? null,
     items: {
       create: m.items.map((item, position) => ({
         id: item.id,
@@ -118,6 +148,7 @@ function toMission(row: PrismaMissionWithItems): Mission {
     y: row.y,
     respect: row.respect,
     rewardGranted: row.rewardGranted,
+    method: (row.method ?? undefined) as Mission['method'],
     items: row.items.map(toItem),
   };
 }
@@ -138,5 +169,6 @@ type PrismaMissionCreateInput = {
   y: number;
   respect: number;
   rewardGranted: boolean;
+  method: string | null;
   items: { create: { id: string; text: string; done: boolean; position: number }[] };
 };
