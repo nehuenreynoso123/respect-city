@@ -1,4 +1,5 @@
 import type { CategoryKey } from './categories';
+import type { MethodKey } from './methods';
 
 export interface ChecklistItem {
   id: string;
@@ -16,4 +17,6 @@ export interface Mission {
   items: ChecklistItem[];
   /** Grants once: survives unchecking (legacy completeMission flag). */
   rewardGranted?: boolean;
+  /** Optional learning-method tag (see methods.ts). Not used by rewards. */
+  method?: MethodKey;
 }

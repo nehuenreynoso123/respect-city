@@ -76,6 +76,48 @@ describe('loadInitialState (legacy load flow)', () => {
     expect(fake.map.size).toBe(before);
   });
 
+  it('realigns app-owned missions to the new map, keeps user missions', () => {
+    const { fake, repo } = setup();
+    // Old layout: "Morning Workout" sat on the old mainland (640,640) and
+    // routine block 3 at (1620,1000) — both now point at the bay / off-coast.
+    fake.map.set(
+      STORAGE_KEY,
+      JSON.stringify({
+        player: { exp: 10, stamina: 0, intel: 0, coins: 0 },
+        missions: [
+          {
+            id: 'custom', title: 'My Own', category: 'work', x: 42, y: 43,
+            respect: 100, items: [{ id: 'i', text: 'do', done: true }],
+            rewardGranted: true,
+          },
+          {
+            id: 'w', title: 'Morning Workout', category: 'gym', x: 640, y: 640,
+            respect: 150, items: [{ id: 'j', text: 'run', done: false }],
+            rewardGranted: false,
+          },
+          {
+            id: 'b3', title: ROUTINE_MISSIONS[2].title, category: 'work',
+            x: 1620, y: 1000, respect: 250, items: [], rewardGranted: false,
+          },
+        ],
+        sound: true,
+        routineSeeded: ROUTINE_VERSION,
+      }),
+    );
+
+    const state = loadInitialState(repo);
+    const byTitle = (t: string) => state.missions.find(m => m.title === t)!;
+
+    // App-owned missions move to their canonical land positions…
+    expect([byTitle('Morning Workout').x, byTitle('Morning Workout').y]).toEqual([2010, 380]);
+    expect([byTitle(ROUTINE_MISSIONS[2].title).x, byTitle(ROUTINE_MISSIONS[2].title).y])
+      .toEqual([1620, 860]);
+    // …while a user-created mission keeps its position and its progress.
+    expect([byTitle('My Own').x, byTitle('My Own').y]).toEqual([42, 43]);
+    expect(byTitle('My Own').items[0].done).toBe(true);
+    expect(state.missions).toHaveLength(3);
+  });
+
   it('corrupt data falls back to a fresh seed', () => {
     const { fake, repo } = setup();
     fake.map.set(STORAGE_KEY, '{{{ not json');

@@ -2,3 +2,8 @@ node_modules/
 dist/
 *.local
 .DS_Store
+
+# Backend env — never commit secrets
+.env
+.env.*
+!.env.example
