@@ -5,7 +5,7 @@ import { emptyPlayer } from '@/slices/player/domain/player';
 import type { Mission } from '../domain/types';
 import type { MissionInput } from './commands';
 import { reduce } from './reducer';
-import type { AppState } from './state';
+import type { AppState, PersistedState } from './state';
 
 const makeMission = (over: Partial<Mission> = {}): Mission => ({
   id: 'm1',
@@ -200,5 +200,34 @@ describe('reduce — deleteMission / UI commands', () => {
       reduce({ ...state, selectedId: 'm1' }, { type: 'selectMission', missionId: null }).state
         .selectedId,
     ).toBeNull();
+  });
+});
+
+describe('reduce — replaceState', () => {
+  it('adopts every persisted field from the payload and emits no events', () => {
+    const next: PersistedState = {
+      player: { exp: 900, stamina: 50, intel: 60, coins: 90 },
+      missions: [makeMission({ id: 'server', title: 'Server Mission' })],
+      sound: false,
+      routineSeeded: 3,
+    };
+    const result = reduce(makeState(), { type: 'replaceState', state: next });
+
+    expect(result.events).toEqual([]);
+    expect(result.state.player).toEqual(next.player);
+    expect(result.state.missions).toEqual(next.missions);
+    expect(result.state.sound).toBe(false);
+    expect(result.state.routineSeeded).toBe(3);
+  });
+
+  it('preserves local-only selectedId and filter (restriction 8)', () => {
+    const state: AppState = { ...makeState(), selectedId: 'm1', filter: 'active' };
+    const result = reduce(state, {
+      type: 'replaceState',
+      state: { player: emptyPlayer(), missions: [], sound: true, routineSeeded: 0 },
+    });
+
+    expect(result.state.selectedId).toBe('m1');
+    expect(result.state.filter).toBe('active');
   });
 });
