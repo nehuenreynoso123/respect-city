@@ -28,7 +28,12 @@ export async function apiErrorFrom(response: Response): Promise<ApiError> {
       return new ApiError(code, typeof message === 'string' ? message : code);
     }
   } catch {
-    // Non-JSON body: fall through to the generic error.
+    // Non-JSON body: fall through to the status fallback.
+  }
+  // Session-expiry codes: a 401/403 tells the store to drop the token even
+  // when the body is not the shared envelope (proxy, gateway, malformed JSON).
+  if (response.status === 401 || response.status === 403) {
+    return new ApiError('unauthorized', `Request failed with status ${response.status}.`);
   }
   return new ApiError('unknown', `Request failed with status ${response.status}.`);
 }

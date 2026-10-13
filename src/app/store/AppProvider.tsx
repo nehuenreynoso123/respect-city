@@ -184,13 +184,23 @@ export function AppProvider({ children }: AppProviderProps) {
   // --- Auth actions -------------------------------------------------------
   const adoptSession = useCallback(
     async (response: AuthResponse) => {
+      // Establish the session only after the authoritative state loads: the
+      // token stays in memory for the request and is persisted only on success,
+      // so a failed state fetch never leaves a half-established session behind.
       tokenRef.current = response.accessToken;
-      saveToken(storage, response.accessToken);
       setUser(response.user);
-      const loaded = await repo.load();
-      rawDispatch({ type: 'replaceState', state: loaded });
-      setNotice(null);
-      setAuth('authenticated');
+      try {
+        const loaded = await repo.load();
+        saveToken(storage, response.accessToken);
+        rawDispatch({ type: 'replaceState', state: loaded });
+        setNotice(null);
+        setAuth('authenticated');
+      } catch (error) {
+        tokenRef.current = null;
+        setUser(null);
+        setCelebration(null);
+        throw error;
+      }
     },
     [repo, storage, rawDispatch],
   );
@@ -215,6 +225,9 @@ export function AppProvider({ children }: AppProviderProps) {
     clearToken(storage);
     setUser(null);
     setNotice(null);
+    // The guest subtree unmounts the overlay without running its auto-hide
+    // cleanup, so clear it here or the celebration resurfaces on next login.
+    setCelebration(null);
     setAuth('guest');
     // Clean slate for the next login; the guest screen hides the stale UI.
     rawDispatch({ type: 'replaceState', state: persistedOf(freshAppState()) });
@@ -248,11 +261,15 @@ export function AppProvider({ children }: AppProviderProps) {
             tokenRef.current = null;
             clearToken(storage);
             setUser(null);
+            setCelebration(null);
             setAuth('guest');
             setNotice('Session expired. Please log in.');
             return;
           }
-          // Roll the optimistic change back to the pre-command snapshot.
+          // Roll the optimistic change back to the pre-command snapshot and
+          // drop any celebration the optimistic reducer may have fired: the
+          // mutation failed, so a "reward" overlay would be a lie.
+          setCelebration(null);
           rawDispatch({ type: 'replaceState', state: plan.snapshot });
           setNotice(
             error instanceof ApiError

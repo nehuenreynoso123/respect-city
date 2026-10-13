@@ -96,4 +96,14 @@ describe('HttpAuthAdapter', () => {
 
     await expect(adapter.me()).rejects.toMatchObject({ name: 'ApiError', code: 'unknown' });
   });
+
+  it('maps a bare 401 without the envelope to code "unauthorized"', async () => {
+    stubFetch(() => new Response('Not authorized', { status: 401 }));
+    const adapter = new HttpAuthAdapter('http://api.test', () => null);
+
+    await expect(adapter.me()).rejects.toMatchObject({
+      name: 'ApiError',
+      code: 'unauthorized',
+    });
+  });
 });
