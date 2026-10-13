@@ -1,6 +1,7 @@
 import { Bar } from '@/shared/ui/Bar';
 import { Checkbox } from '@/shared/ui/Checkbox';
 import { categoryOf } from '@/slices/mission/domain/categories';
+import { methodOf } from '@/slices/mission/domain/methods';
 import type { Mission } from '@/slices/mission/domain/types';
 
 export interface MissionPanelProps {
@@ -19,6 +20,7 @@ export interface MissionPanelProps {
  */
 export function MissionPanel({ mission, onToggleItem, onDelete, onClose }: MissionPanelProps) {
   const cat = mission ? categoryOf(mission.category) : null;
+  const method = mission ? methodOf(mission.method) : null;
   const checked = mission ? mission.items.filter((i) => i.done).length : 0;
   const total = mission ? mission.items.length : 0;
   const progress = total > 0 ? (checked / total) * 100 : 0;
@@ -45,6 +47,11 @@ export function MissionPanel({ mission, onToggleItem, onDelete, onClose }: Missi
             <span id="panel-cat" style={cat ? { color: cat.color } : undefined}>
               {mission ? mission.category : 'CATEGORY'}
             </span>
+            {method && (
+              <span id="panel-method" title="Learning method">
+                {`${method.icon} ${method.label}`}
+              </span>
+            )}
             <span className="respect" id="panel-respect">
               {mission ? `+${mission.respect} RESPECT` : '+0 RESPECT'}
             </span>

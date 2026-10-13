@@ -306,6 +306,11 @@ button{ font-family:inherit; cursor:pointer; }
 }
 .check-item:hover{ border-color:var(--pink); }
 .check-item input{ display:none; }         /* custom checkbox below */
+/* Fills the row and forwards clicks/keyboard to the hidden input. */
+.check-item .check-label{
+  display:flex; align-items:center; gap:12px;
+  width:100%; cursor:pointer;
+}
 .check-box{
   width:22px; height:22px; flex-shrink:0;
   border:2px solid var(--cyan); border-radius:5px;
