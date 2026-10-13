@@ -122,9 +122,11 @@ backend/
       protegidas.
       *Check*: `typecheck` + `build` + 37 tests (10 files) + rutas vía `app.inject()`
       → **OK** (commit `c0323a1`)
-- [ ] **T5 — Comandos autoritativos**: create/delete/toggle/sound con anti-cheat
+- [x] **T5 — Comandos autoritativos**: create/delete/toggle/sound con anti-cheat
       transaccional (rewardGranted once, caps, math portado del front).
-      *Check*: tests de aplicación con repos fakes + integración → OK
+      *Check*: `prisma:generate` + `typecheck` + `test` (66 tests, 16 files, incl.
+      integración real) + `build` → **OK** (commits `cc04f5e`, `c694ffe`; assess
+      medium → verificación ordinaria, sin review)
 - [ ] **T6 — HTTP final**: rutas de missions + state + sound, error handler,
       envelope de error, respuesta `PersistedState` en cada mutación.
       *Check*: `app.inject()` E2E auth→state→mutaciones + gates → OK
@@ -185,7 +187,18 @@ integración front) → supera 400.
   protegida por `requireAuth`. `DomainError` + error handler en `app.ts` como
   composition root con adaptadores inyectables. Gates: `typecheck` + `build` +
   37 tests (10 files) verde.
-- ⬜ T5 — comandos autoritativos.
+- ✅ **T5 completo** → commits `cc04f5e` + `c694ffe`: schema ampliado (Player
+  `sound Boolean @default(true)` + `routineSeeded Int @default(0)`, Mission
+  `method String?`; migración `20261013022456_add_player_flags_and_mission_method`
+  aplicada vía `migrate dev`); `PersistedGameState` = blob legacy completo;
+  `player/application/applyRewards` (port literal del `playerReducer`);
+  `mission/application/` con `requireState` (404 `state-not-found` si no hay
+  estado) + `createMission|deleteMission|toggleMissionItem|toggleSound`
+  (anti-cheat: grant solo en transición not-done→done, `rewardGranted` una vez,
+  caps 100, math del front). Tests: 66 (16 files) incl. integración real
+  `PrismaStateRepository.integration.test.ts` contra el Postgres de compose —
+  cierra el pendiente de T3.
+- ⬜ T6 — HTTP final.
 
 ## Decisiones de diseño (cambios respecto del plan original)
 
@@ -200,6 +213,24 @@ integración front) → supera 400.
   mínima para tener un caso real de guard JWT testeable de punta a punta con
   `app.inject()`, sin esperar a las rutas de `state` (T6). El front la usará en
   T7 para validar el token guardado antes de pedir el estado.
+- **`PersistedGameState` extendido (T5)**: pasó de `{ player, missions }` a
+  exactamente el blob legacy `{ player, missions, sound, routineSeeded }`.
+  El toggle de sonido (T5) y el `GET /api/state` (T6) necesitan esas flags, y la
+  restricción 5 exige devolver el `PersistedState` completo en cada mutación.
+- **Drift de `method` cerrado en T5**: learning-methods (`672e722`) agregó
+  `method` al `Mission` del front, pero el backend no lo persistía. Se portó
+  `mission/domain/methods.ts` (`MethodKey`) + columna `method String?` +
+  mapeo en `PrismaStateRepository`; sin esto, T7 habría perdido el tag al
+  sincronizar.
+- **`requireState` como contrato único**: cada comando falla con
+  `state-not-found` 404 si la cuenta aún no tiene estado. El seeding (demo +
+  rutina) llega en T6 — el register (T4) queda sin seeding para no tocar un
+  módulo ya cerrado.
+- **Raza teórica del toggle (deferida a v2)**: read→muta→save es atómico por
+  agregado (`save()` transaccional del repo, upsert + delete en una
+  transacción), pero dos toggles concurrentes en la misma misión podrían leer
+  el mismo `rewardGranted` y doble-grantear. Para v1 (un usuario, un device) se
+  acepta; hardening con update condicional / SELECT FOR UPDATE → v2.
 - **`requireAuth` como factory**: el guard se construye con el `TokenService`
   inyectado (`requireAuth(tokens)`) y devuelve un `preHandlerAsyncHookHandler`.
   El `userId` se decora en el request (`decorateRequest('userId', null)`) y se
@@ -227,8 +258,9 @@ integración front) → supera 400.
   `prisma.config.ts`.
 - **`prisma migrate diff` cambió el flag**: `--to-schema-datamodel` no existe en
   Prisma 7; es `--to-schema`.
-- **Migración offline**: con el daemon de Docker caído, la migración
-  `20261009224308_init` se generó con `migrate diff --from-empty --to-schema
-  --script -o`. Pendiente para cuando haya Docker: `npm run prisma:deploy`
-  (aplica la migración a Postgres) + tests de integración reales de
-  `PrismaStateRepository` (por ahora cubierto por typecheck/generación).
+- **Migración offline (T3) vs. `migrate dev` (T5)**: con el daemon caído, T3
+  generó la migración inicial con `migrate diff --from-empty --to-schema
+  --script -o`. Con Docker arriba, T5 usó `prisma migrate dev` (aplicó pending,
+  diffeó, generó el client) → migración `20261013022456_add_player_flags_and_mission_method`
+  aplicada y `migrate status` up to date. El pendiente documentado de T3 quedó
+  cerrado: la suite incluye `PrismaStateRepository.integration.test.ts` real.
