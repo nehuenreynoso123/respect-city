@@ -83,4 +83,18 @@ describe('validateDraft', () => {
     if (!result.ok) return;
     expect(result.input.items).toEqual([{ id: 'a', text: 'Ship' }]);
   });
+
+  it('carries method through from draft to input', () => {
+    const result = validateDraft({ ...valid(), method: 'feynman' });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.input.method).toBe('feynman');
+  });
+
+  it('yields undefined when draft has no method', () => {
+    const result = validateDraft(valid());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.input.method).toBeUndefined();
+  });
 });
