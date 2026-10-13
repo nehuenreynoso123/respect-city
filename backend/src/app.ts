@@ -9,6 +9,10 @@ import type { PasswordHasher } from './modules/auth/ports/PasswordHasher.js';
 import type { TokenService } from './modules/auth/ports/TokenService.js';
 import type { UserRepository } from './modules/auth/ports/UserRepository.js';
 import { registerAuthRoutes } from './modules/auth/http/routes.js';
+import { registerMissionRoutes } from './modules/mission/http/routes.js';
+import { PrismaStateRepository } from './modules/state/adapters/PrismaStateRepository.js';
+import { registerStateRoutes } from './modules/state/http/routes.js';
+import type { StateRepository } from './modules/state/ports/StateRepository.js';
 import { prisma } from './shared/db/prisma.js';
 import { DomainError } from './shared/domain/errors.js';
 
@@ -17,6 +21,7 @@ export interface AppOptions {
   userRepository?: UserRepository;
   passwordHasher?: PasswordHasher;
   tokenService?: TokenService;
+  stateRepository?: StateRepository;
 }
 
 /**
@@ -33,10 +38,18 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   const passwordHasher = options.passwordHasher ?? new BcryptPasswordHasher();
   const tokenService =
     options.tokenService ?? new JwtTokenService(env.JWT_SECRET, env.JWT_EXPIRES_IN);
+  const stateRepository = options.stateRepository ?? new PrismaStateRepository(prisma);
 
   registerAuthRoutes(app, { userRepository, passwordHasher, tokenService });
+  registerStateRoutes(app, { stateRepository, tokenService });
+  registerMissionRoutes(app, { stateRepository, tokenService });
 
   app.get('/health', async () => ({ status: 'ok' }));
+
+  // Orphan routes still answer with the shared error envelope.
+  app.setNotFoundHandler((_request, reply) => {
+    reply.code(404).send({ error: { code: 'not-found', message: 'Route not found.' } });
+  });
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof DomainError) {
