@@ -10,6 +10,13 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    // Dev proxy: the front calls same-origin /api/*; forward it to the backend
+    // (default port 3000). No CORS on the server — this is the only bridge.
+    proxy: {
+      '/api': 'http://localhost:3000',
+    },
+  },
   test: {
     // Domain/application logic is pure TypeScript: no DOM needed.
     environment: 'node',

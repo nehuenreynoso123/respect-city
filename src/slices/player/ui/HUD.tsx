@@ -22,13 +22,15 @@ export interface HUDProps {
   onToggleList: () => void;
   /** Legacy `#btn-new` → open the create modal (caller seeds the location). */
   onNewMission: () => void;
+  /** Clears the session and returns to the auth gate. Absent = no control. */
+  onLogout?: () => void;
 }
 
 /**
  * Header: logo, level + EXP bar, stamina, intelligence, coins, actions.
  * Values mirror legacy renderHUD() (index.html:963-976) exactly.
  */
-export function HUD({ player, sound, onToggleSound, onToggleList, onNewMission }: HUDProps) {
+export function HUD({ player, sound, onToggleSound, onToggleList, onNewMission, onLogout }: HUDProps) {
   const level = levelOf(player.exp);
   const inLvl = inLevelExp(player.exp);
 
@@ -81,6 +83,11 @@ export function HUD({ player, sound, onToggleSound, onToggleList, onNewMission }
         >
           {sound ? '🔊' : '🔇'}
         </button>
+        {onLogout && (
+          <button className="btn" id="btn-logout" title="Log out" onClick={onLogout}>
+            ⏻
+          </button>
+        )}
       </div>
     </header>
   );
