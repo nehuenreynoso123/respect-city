@@ -1,10 +1,12 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+import cookie from '@fastify/cookie';
 import { ZodError } from 'zod';
 
 import { loadEnv } from './config/env.js';
 import { BcryptPasswordHasher } from './modules/auth/adapters/BcryptPasswordHasher.js';
 import { JwtTokenService } from './modules/auth/adapters/JwtTokenService.js';
 import { PrismaUserRepository } from './modules/auth/adapters/PrismaUserRepository.js';
+import { durationToSeconds } from './modules/auth/domain/duration.js';
 import type { PasswordHasher } from './modules/auth/ports/PasswordHasher.js';
 import type { TokenService } from './modules/auth/ports/TokenService.js';
 import type { UserRepository } from './modules/auth/ports/UserRepository.js';
@@ -40,7 +42,19 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     options.tokenService ?? new JwtTokenService(env.JWT_SECRET, env.JWT_EXPIRES_IN);
   const stateRepository = options.stateRepository ?? new PrismaStateRepository(prisma);
 
-  registerAuthRoutes(app, { userRepository, passwordHasher, tokenService });
+  // Cookie parsing must be registered before the routes that read
+  // request.cookies (session guard, set/clear helpers).
+  app.register(cookie);
+
+  registerAuthRoutes(app, {
+    userRepository,
+    passwordHasher,
+    tokenService,
+    cookieSecure: env.COOKIE_SECURE,
+    // The session cookie shares the JWT lifetime so the browser drops both
+    // at the same time.
+    sessionMaxAgeSeconds: durationToSeconds(env.JWT_EXPIRES_IN),
+  });
   registerStateRoutes(app, { stateRepository, tokenService });
   registerMissionRoutes(app, { stateRepository, tokenService });
 

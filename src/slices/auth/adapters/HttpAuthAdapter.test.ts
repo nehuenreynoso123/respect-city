@@ -26,38 +26,38 @@ const lastCall = (mock: ReturnType<typeof stubFetch>): FetchArgs =>
 describe('HttpAuthAdapter', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('POSTs register to /api/auth/register with the credentials body', async () => {
-    const mock = stubFetch(() =>
-      json({ user: { id: 'u1', email: 'a@b.c' }, accessToken: 'tok' }, 201),
-    );
-    const adapter = new HttpAuthAdapter('http://api.test', () => null);
+  it('POSTs register with credentials and returns only the user', async () => {
+    const mock = stubFetch(() => json({ user: { id: 'u1', email: 'a@b.c' } }, 201));
+    const adapter = new HttpAuthAdapter('http://api.test');
 
     const result = await adapter.register({ email: 'a@b.c', password: 'password1' });
 
-    expect(result).toEqual({ user: { id: 'u1', email: 'a@b.c' }, accessToken: 'tok' });
+    expect(result).toEqual({ user: { id: 'u1', email: 'a@b.c' } });
     const [url, init] = lastCall(mock);
     expect(url).toBe('http://api.test/api/auth/register');
     expect(init?.method).toBe('POST');
+    expect(init?.credentials).toBe('same-origin');
     expect(JSON.parse(String(init?.body))).toEqual({
       email: 'a@b.c',
       password: 'password1',
     });
   });
 
-  it('POSTs login to /api/auth/login', async () => {
-    const mock = stubFetch(() =>
-      json({ user: { id: 'u1', email: 'a@b.c' }, accessToken: 'tok' }),
-    );
-    const adapter = new HttpAuthAdapter('http://api.test', () => null);
+  it('POSTs login same-origin and returns only the user', async () => {
+    const mock = stubFetch(() => json({ user: { id: 'u1', email: 'a@b.c' } }));
+    const adapter = new HttpAuthAdapter('http://api.test');
 
-    await adapter.login({ email: 'a@b.c', password: 'password1' });
+    const result = await adapter.login({ email: 'a@b.c', password: 'password1' });
 
-    expect(lastCall(mock)[0]).toBe('http://api.test/api/auth/login');
+    expect(result).toEqual({ user: { id: 'u1', email: 'a@b.c' } });
+    const [url, init] = lastCall(mock);
+    expect(url).toBe('http://api.test/api/auth/login');
+    expect(init?.credentials).toBe('same-origin');
   });
 
-  it('GETs /api/me with the bearer token from the getter', async () => {
+  it('GETs /api/me same-origin so the session cookie rides along', async () => {
     const mock = stubFetch(() => json({ user: { id: 'u1', email: 'a@b.c' } }));
-    const adapter = new HttpAuthAdapter('http://api.test', () => 'secret');
+    const adapter = new HttpAuthAdapter('http://api.test');
 
     const result = await adapter.me();
 
@@ -65,23 +65,33 @@ describe('HttpAuthAdapter', () => {
     const [url, init] = lastCall(mock);
     expect(url).toBe('http://api.test/api/me');
     expect(init?.method ?? 'GET').toBe('GET');
-    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer secret');
+    expect(init?.credentials).toBe('same-origin');
   });
 
-  it('omits the Authorization header when there is no token', async () => {
-    const mock = stubFetch(() => json({ error: { code: 'unauthorized', message: 'nope' } }, 401));
-    const adapter = new HttpAuthAdapter('http://api.test', () => null);
+  it('POSTs logout to /api/auth/logout same-origin and resolves void', async () => {
+    const mock = stubFetch(() => json({ ok: true }));
+    const adapter = new HttpAuthAdapter('http://api.test');
 
-    await expect(adapter.me()).rejects.toBeInstanceOf(ApiError);
-    const [, init] = lastCall(mock);
-    expect((init?.headers as Record<string, string>).Authorization).toBeUndefined();
+    await expect(adapter.logout()).resolves.toBeUndefined();
+
+    const [url, init] = lastCall(mock);
+    expect(url).toBe('http://api.test/api/auth/logout');
+    expect(init?.method).toBe('POST');
+    expect(init?.credentials).toBe('same-origin');
+  });
+
+  it('propagates an ApiError when logout fails', async () => {
+    stubFetch(() => json({ error: { code: 'internal', message: 'boom' } }, 500));
+    const adapter = new HttpAuthAdapter('http://api.test');
+
+    await expect(adapter.logout()).rejects.toBeInstanceOf(ApiError);
   });
 
   it('maps a 401 error envelope to an ApiError code "unauthorized"', async () => {
     stubFetch(() =>
       json({ error: { code: 'invalid-credentials', message: 'Invalid email or password.' } }, 401),
     );
-    const adapter = new HttpAuthAdapter('http://api.test', () => null);
+    const adapter = new HttpAuthAdapter('http://api.test');
 
     await expect(adapter.login({ email: 'a@b.c', password: 'nope' })).rejects.toMatchObject({
       name: 'ApiError',
@@ -92,14 +102,14 @@ describe('HttpAuthAdapter', () => {
 
   it('falls back to a generic ApiError on a non-JSON body', async () => {
     stubFetch(() => new Response('<html>boom</html>', { status: 500 }));
-    const adapter = new HttpAuthAdapter('http://api.test', () => null);
+    const adapter = new HttpAuthAdapter('http://api.test');
 
     await expect(adapter.me()).rejects.toMatchObject({ name: 'ApiError', code: 'unknown' });
   });
 
   it('maps a bare 401 without the envelope to code "unauthorized"', async () => {
     stubFetch(() => new Response('Not authorized', { status: 401 }));
-    const adapter = new HttpAuthAdapter('http://api.test', () => null);
+    const adapter = new HttpAuthAdapter('http://api.test');
 
     await expect(adapter.me()).rejects.toMatchObject({
       name: 'ApiError',

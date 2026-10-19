@@ -56,65 +56,58 @@ const missionInput: MissionInput = {
 describe('HttpGameRepository', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('GET /api/state parses the PersistedState and sends the bearer token', async () => {
+  it('GET /api/state parses the PersistedState over a same-origin cookie', async () => {
     const mock = stubFetch(() => json(serverState));
-    const repo = new HttpGameRepository('http://api.test', () => 'tok');
+    const repo = new HttpGameRepository('http://api.test');
 
     await expect(repo.load()).resolves.toEqual(serverState);
     const [url, init] = lastCall(mock);
     expect(url).toBe('http://api.test/api/state');
     expect(init?.method).toBe('GET');
-    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer tok');
-  });
-
-  it('omits the Authorization header when there is no token', async () => {
-    const mock = stubFetch(() => json(serverState));
-    const repo = new HttpGameRepository('http://api.test', () => null);
-
-    await repo.load();
-
-    const [, init] = lastCall(mock);
-    expect((init?.headers as Record<string, string>).Authorization).toBeUndefined();
+    expect(init?.credentials).toBe('same-origin');
   });
 
   it('POST /api/missions sends the MissionInput as the JSON body', async () => {
     const mock = stubFetch(() => json(serverState, 201));
-    const repo = new HttpGameRepository('http://api.test', () => 'tok');
+    const repo = new HttpGameRepository('http://api.test');
 
     await expect(repo.createMission(missionInput)).resolves.toEqual(serverState);
     const [url, init] = lastCall(mock);
     expect(url).toBe('http://api.test/api/missions');
     expect(init?.method).toBe('POST');
+    expect(init?.credentials).toBe('same-origin');
     expect(JSON.parse(String(init?.body))).toEqual(missionInput);
   });
 
   it('DELETE /api/missions/:missionId URL-encodes the id and sends no body', async () => {
     const mock = stubFetch(() => json(serverState));
-    const repo = new HttpGameRepository('http://api.test', () => 'tok');
+    const repo = new HttpGameRepository('http://api.test');
 
     await repo.deleteMission('m/1');
 
     const [url, init] = lastCall(mock);
     expect(url).toBe('http://api.test/api/missions/m%2F1');
     expect(init?.method).toBe('DELETE');
+    expect(init?.credentials).toBe('same-origin');
     expect(init?.body).toBeUndefined();
   });
 
   it('POST /api/missions/:missionId/items/:itemId/toggle maps both ids', async () => {
     const mock = stubFetch(() => json(serverState));
-    const repo = new HttpGameRepository('http://api.test', () => 'tok');
+    const repo = new HttpGameRepository('http://api.test');
 
     await repo.toggleItem('m1', 'i 1');
 
     const [url, init] = lastCall(mock);
     expect(url).toBe('http://api.test/api/missions/m1/items/i%201/toggle');
     expect(init?.method).toBe('POST');
+    expect(init?.credentials).toBe('same-origin');
     expect(init?.body).toBeUndefined();
   });
 
   it('PATCH /api/sound sends the explicit enabled flag', async () => {
     const mock = stubFetch(() => json(serverState));
-    const repo = new HttpGameRepository('http://api.test', () => 'tok');
+    const repo = new HttpGameRepository('http://api.test');
 
     await repo.toggleSound(false);
 
@@ -126,7 +119,7 @@ describe('HttpGameRepository', () => {
 
   it('throws an ApiError with code/message on a non-2xx response', async () => {
     stubFetch(() => json({ error: { code: 'not-found', message: 'State not found.' } }, 404));
-    const repo = new HttpGameRepository('http://api.test', () => 'tok');
+    const repo = new HttpGameRepository('http://api.test');
 
     await expect(repo.load()).rejects.toBeInstanceOf(ApiError);
     await expect(repo.load()).rejects.toMatchObject({

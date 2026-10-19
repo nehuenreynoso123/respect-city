@@ -7,16 +7,13 @@ import type { GameRepository } from '../ports/GameRepository';
 type Method = 'GET' | 'POST' | 'DELETE' | 'PATCH';
 
 /**
- * fetch-based GameRepository. `getToken` is read on every call so the bearer
- * header always reflects the current session. Responses are trusted as
- * `PersistedState` (the server is the source of truth; shape validation is not
- * duplicated in the client).
+ * fetch-based GameRepository. The session lives in an httpOnly cookie, so
+ * requests go out `credentials: 'same-origin'` and the client never attaches
+ * a bearer token. Responses are trusted as `PersistedState` (the server is the
+ * source of truth; shape validation is not duplicated here).
  */
 export class HttpGameRepository implements GameRepository {
-  constructor(
-    private readonly baseUrl: string,
-    private readonly getToken: () => string | null,
-  ) {}
+  constructor(private readonly baseUrl: string) {}
 
   load(): Promise<PersistedState> {
     return this.request('GET', '/api/state');
@@ -47,13 +44,12 @@ export class HttpGameRepository implements GameRepository {
     body?: unknown,
   ): Promise<PersistedState> {
     const headers: Record<string, string> = {};
-    const token = this.getToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       method,
       headers,
+      credentials: 'same-origin',
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (!response.ok) throw await apiErrorFrom(response);

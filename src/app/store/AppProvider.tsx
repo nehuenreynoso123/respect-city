@@ -13,7 +13,6 @@ import { ApiError } from '@/shared/http/ApiError';
 import { WebAudioSfxAdapter } from '@/slices/audio/adapters/WebAudioSfxAdapter';
 import type { SfxPort } from '@/slices/audio/ports/SfxPort';
 import { HttpAuthAdapter } from '@/slices/auth/adapters/HttpAuthAdapter';
-import { clearToken, loadToken, saveToken } from '@/slices/auth/application/session';
 import type { AuthResponse, User } from '@/slices/auth/domain/types';
 import { HttpGameRepository } from '@/slices/mission/adapters/HttpGameRepository';
 import type { AppCommand } from '@/slices/mission/application/commands';
@@ -21,7 +20,6 @@ import type { AppEvent } from '@/slices/mission/application/events';
 import { reduce } from '@/slices/mission/application/reducer';
 import { freshAppState, persistedOf } from '@/slices/mission/application/state';
 import type { AppState, PersistedState } from '@/slices/mission/application/state';
-import { LocalStorageAdapter } from '@/slices/storage/adapters/LocalStorageAdapter';
 
 import { isLocalCommand, mutationOf } from './pipeline';
 
@@ -48,12 +46,12 @@ export interface AppContextValue {
   /** Non-null while the RESPECT+ overlay is showing. */
   celebration: RespectCelebration | null;
   hideCelebration: () => void;
-  /** Session gate: 'loading' while a stored token is validated. */
+  /** Session gate: 'loading' while the session cookie is validated. */
   auth: AuthStatus;
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   /** Transient user-facing error/info message. */
   notice: string | null;
   dismissNotice: () => void;
@@ -72,20 +70,16 @@ export interface AppProviderProps {
 }
 
 /**
- * Composition root: builds the storage + HTTP adapters once, owns the pure
- * mission reducer, gates the app behind a validated session, and runs the
- * optimistic reconciliation pipeline for mutation commands (dispatch locally,
- * then adopt the authoritative server state or roll back).
+ * Composition root: builds the HTTP adapters once, owns the pure mission
+ * reducer, gates the app behind a validated session, and runs the optimistic
+ * reconciliation pipeline for mutation commands (dispatch locally, then adopt
+ * the authoritative server state or roll back). The session is an httpOnly
+ * cookie the client never reads.
  */
 export function AppProvider({ children }: AppProviderProps) {
   // --- Adapters (built once) ---------------------------------------------
-  const [storage] = useState(() => new LocalStorageAdapter());
-  // Token getter reads a ref kept in sync with the auth state; adapters never
-  // read localStorage per call.
-  const tokenRef = useRef<string | null>(null);
-  const getToken = useCallback(() => tokenRef.current, []);
-  const [authRepo] = useState(() => new HttpAuthAdapter(API_BASE, getToken));
-  const [repo] = useState(() => new HttpGameRepository(API_BASE, getToken));
+  const [authRepo] = useState(() => new HttpAuthAdapter(API_BASE));
+  const [repo] = useState(() => new HttpGameRepository(API_BASE));
 
   // Latest committed sound flag for the sfx gate (adapter takes a getter).
   const soundRef = useRef(true);
@@ -140,7 +134,7 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   }, [state, sfx]);
 
-  // --- Boot: validate a stored token, then hydrate the state --------------
+  // --- Boot: validate the session cookie, then hydrate the state ----------
   // The ref guard makes the effect idempotent under React StrictMode's dev
   // double-invoke (the async boot runs once per provider instance).
   const bootedRef = useRef(false);
@@ -148,14 +142,6 @@ export function AppProvider({ children }: AppProviderProps) {
     if (bootedRef.current) return;
     bootedRef.current = true;
 
-    const stored = loadToken(storage);
-    if (!stored) {
-      tokenRef.current = null;
-      setAuth('guest');
-      return;
-    }
-
-    tokenRef.current = stored;
     void (async () => {
       try {
         const { user: me } = await authRepo.me();
@@ -163,46 +149,33 @@ export function AppProvider({ children }: AppProviderProps) {
         setUser(me);
         rawDispatch({ type: 'replaceState', state: loaded });
         setAuth('authenticated');
-      } catch (error) {
-        if (error instanceof ApiError && error.code === 'unauthorized') {
-          // Token rejected: drop it and ask for a fresh login.
-          tokenRef.current = null;
-          clearToken(storage);
-          setUser(null);
-          setAuth('guest');
-          setNotice('Session expired. Please log in.');
-          return;
-        }
-        // Network/other failure (e.g. backend down): keep the token so a retry
-        // can succeed, but fall back to the guest screen with a softer message.
+      } catch {
+        // A missing or expired session cookie is the normal "logged out"
+        // state, so any boot failure lands on the guest screen silently.
         setAuth('guest');
-        setNotice('Unable to reach server.');
       }
     })();
-  }, [authRepo, repo, storage, rawDispatch]);
+  }, [authRepo, repo, rawDispatch]);
 
   // --- Auth actions -------------------------------------------------------
   const adoptSession = useCallback(
     async (response: AuthResponse) => {
-      // Establish the session only after the authoritative state loads: the
-      // token stays in memory for the request and is persisted only on success,
-      // so a failed state fetch never leaves a half-established session behind.
-      tokenRef.current = response.accessToken;
+      // The login/register response already set the httpOnly session cookie,
+      // so the follow-up load() travels with it. Only the authoritative state
+      // load can fail here, and that failure tears the half-session down.
       setUser(response.user);
       try {
         const loaded = await repo.load();
-        saveToken(storage, response.accessToken);
         rawDispatch({ type: 'replaceState', state: loaded });
         setNotice(null);
         setAuth('authenticated');
       } catch (error) {
-        tokenRef.current = null;
         setUser(null);
         setCelebration(null);
         throw error;
       }
     },
-    [repo, storage, rawDispatch],
+    [repo, rawDispatch],
   );
 
   const login = useCallback(
@@ -220,9 +193,13 @@ export function AppProvider({ children }: AppProviderProps) {
     [authRepo, adoptSession],
   );
 
-  const logout = useCallback(() => {
-    tokenRef.current = null;
-    clearToken(storage);
+  const logout = useCallback(async () => {
+    try {
+      await authRepo.logout();
+    } catch {
+      // Network failure: the local session is cleared anyway; the cookie
+      // expires server-side on its own.
+    }
     setUser(null);
     setNotice(null);
     // The guest subtree unmounts the overlay without running its auto-hide
@@ -231,7 +208,7 @@ export function AppProvider({ children }: AppProviderProps) {
     setAuth('guest');
     // Clean slate for the next login; the guest screen hides the stale UI.
     rawDispatch({ type: 'replaceState', state: persistedOf(freshAppState()) });
-  }, [storage, rawDispatch]);
+  }, [authRepo, rawDispatch]);
 
   // --- Dispatch: optimistic pipeline for mutations ------------------------
   const dispatch = useCallback(
@@ -258,8 +235,7 @@ export function AppProvider({ children }: AppProviderProps) {
         })
         .catch((error: unknown) => {
           if (error instanceof ApiError && error.code === 'unauthorized') {
-            tokenRef.current = null;
-            clearToken(storage);
+            // The cookie is gone or expired mid-session: fall back to guest.
             setUser(null);
             setCelebration(null);
             setAuth('guest');
@@ -278,7 +254,7 @@ export function AppProvider({ children }: AppProviderProps) {
           );
         });
     },
-    [rawDispatch, repo, storage],
+    [rawDispatch, repo],
   );
 
   const value: AppContextValue = {

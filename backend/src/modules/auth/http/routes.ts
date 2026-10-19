@@ -8,11 +8,16 @@ import type { PasswordHasher } from '../ports/PasswordHasher.js';
 import type { TokenService } from '../ports/TokenService.js';
 import type { UserRepository } from '../ports/UserRepository.js';
 import { requireAuth } from './guard.js';
+import { clearSessionCookie, setSessionCookie } from './sessionCookie.js';
 
 export interface AuthDeps {
   userRepository: UserRepository;
   passwordHasher: PasswordHasher;
   tokenService: TokenService;
+  /** Resolved from COOKIE_SECURE; applied to set/clear cookie flags. */
+  cookieSecure: boolean;
+  /** Cookie Max-Age, sized from the JWT TTL (JWT_EXPIRES_IN). */
+  sessionMaxAgeSeconds: number;
 }
 
 const authSchema = z.object({
@@ -20,8 +25,15 @@ const authSchema = z.object({
   password: z.string(),
 });
 
+/**
+ * Transport invariant: the access token produced by the use cases is moved
+ * into the httpOnly session cookie here and is NEVER serialized into the
+ * response body. Login/register answer with `{ user }` only — a body token
+ * would be readable by any XSS at login time, defeating the whole point.
+ */
 export function registerAuthRoutes(app: FastifyInstance, deps: AuthDeps): void {
   const guard = requireAuth(deps.tokenService);
+  const cookieOptions = { secure: deps.cookieSecure, maxAgeSeconds: deps.sessionMaxAgeSeconds };
 
   app.post('/api/auth/register', async (request, reply) => {
     const result = authSchema.safeParse(request.body);
@@ -30,7 +42,8 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthDeps): void {
     }
     const body = result.data;
     const response = await register(deps, body);
-    reply.code(201).send(response);
+    setSessionCookie(reply, response.accessToken, cookieOptions);
+    reply.code(201).send({ user: response.user });
   });
 
   app.post('/api/auth/login', async (request, reply) => {
@@ -40,7 +53,15 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthDeps): void {
     }
     const body = result.data;
     const response = await login(deps, body);
-    reply.code(200).send(response);
+    setSessionCookie(reply, response.accessToken, cookieOptions);
+    reply.code(200).send({ user: response.user });
+  });
+
+  // No guard on purpose: logging out must succeed even with an expired or
+  // missing cookie, otherwise the client can never clear a stale session.
+  app.post('/api/auth/logout', async (_request, reply) => {
+    clearSessionCookie(reply, { secure: deps.cookieSecure });
+    reply.code(200).send({ ok: true });
   });
 
   app.get('/api/me', { preHandler: guard }, async (request, reply) => {

@@ -3,7 +3,7 @@ import type { Player } from '@/slices/player/domain/player';
 
 import type { Mission } from '../domain/types';
 
-/** Exact shape written by the legacy save() to localStorage. */
+/** Persisted state is the wire contract shared with the server (see /api/state). */
 export interface PersistedState {
   player: Player;
   missions: Mission[];
@@ -29,7 +29,7 @@ export function persistedOf(state: AppState): PersistedState {
   };
 }
 
-/** Boot state before any data loads: defaults + demo missions. */
+/** Boot state before any data loads: defaults with no missions until the server state arrives. */
 export function freshAppState(): AppState {
   return {
     player: emptyPlayer(),
