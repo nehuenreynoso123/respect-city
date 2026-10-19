@@ -132,10 +132,24 @@ config; las borraciones cuentan) → supera 400.
     (`auth.routes.test.ts:58-96,149-152`), logout con `Max-Age=0`;
   - `git grep "localStorage\|Authorization\|getToken" -- src/` → sin resultados;
   - `accessToken` solo sobrevive como handoff de transporte en `http/routes.ts:45,56`.
-- ⚠️ **Caveat de entorno (no regresión)**: `backend/src/modules/state/adapters/
-  PrismaStateRepository.integration.test.ts` falla porque el daemon de Docker y
-  Postgres están apagados (`:5432` cerrado). El archivo no está en el diff de ninguno
-  de los dos commits; el resto del backend (17 files) pasa.
+- ✅ **Caveat de entorno, cerrado**: `backend/src/modules/state/adapters/
+  PrismaStateRepository.integration.test.ts` fallaba con Docker apagado (`:5432`
+  cerrado). Con el stack arriba, `npm run test:backend` → **19 files / 95 tests, todos
+  en verde**. No era regresión ni queda pendiente.
+- 🐛 **Bug de deploy encontrado al verificar en vivo (405)**: `docker compose up`
+  recrea contenedores pero **NO reconstruye imágenes**. El contenedor de nginx seguía
+  con la config vieja (sin `location /api/`) y devolvía `405 Not Allowed` a cualquier
+  POST — lo mismo que un `POST` contra un servidor de archivos estáticos. El contenedor
+  del backend también corría código pre-cookie. Fix: `docker compose build` y después
+  `docker compose up -d`. Cualquier cambio en `nginx.conf`, en `Dockerfile` o en el
+  backend exige rebuild, no solo restart.
+- ✅ **Verificación end-to-end en el deploy real** (`:8080` → nginx → backend):
+  - `POST /api/auth/register` → **201**, `set-cookie: rc_session=…; Max-Age=604800;
+    Path=/api; HttpOnly; SameSite=Lax` (sin `Secure`: correcto con HTTP plano) y body
+    `{"user":{…}}` **sin token** — el invariante duro, probado en producción;
+  - `GET /api/me` con cookie → **200**; sin cookie → **401**;
+  - `POST /api/auth/logout` → **200** con `rc_session=; Max-Age=0; … HttpOnly`.
+  - Usuario de prueba creado para la prueba y **borrado** después (DELETE 1, remaining 0).
 - ⚠️ **Caveat de verificación**: el verificador independiente convocado para el commit
   `d2e2ff7` devolvió un reporte no utilizable (afirmaba contenido de archivos que no
   existe, p. ej. `customErrorHandler` en `app.ts`, y que `session.ts` "se adaptó" cuando
@@ -148,8 +162,13 @@ config; las borraciones cuentan) → supera 400.
 
 ## Estado
 
-Feature cerrada en la rama `feat/auth-hardening` (3 commits, sin push). Pendiente
-para el usuario: decidir si abre PR (slices propuestos: `d210806` y `d2e2ff7`+T4) y
-el `chain_strategy` (**stacked-to-main** por defecto). Recordatorio de deploy: el
-stack de compose sirve HTTP plano, así que `COOKIE_SECURE=true` recién cuando haya
-TLS delante — si no, el browser descarta la cookie.
+Feature cerrada en la rama `feat/auth-hardening` (3 commits, pusheada a origin).
+Gates finales: front 14 files/93 tests, backend 19 files/95 tests, y el flujo de
+cookie verificado end-to-end contra el stack de docker.
+Pendiente para el usuario: decidir si abre PR (slices propuestos: `d210806` y
+`d2e2ff7`+`4e1a17a`, base `feat/backend-core` porque esa rama todavía no está mergeada
+en `master`; el segundo slice queda sobre las 400 líneas → necesita `size:exception`).
+Recordatorio de deploy: el stack de compose sirve HTTP plano, así que `COOKIE_SECURE=true`
+recién cuando haya TLS delante — si no, el browser descarta la cookie. Y después de
+cualquier cambio en `nginx.conf`/backend: `docker compose build && docker compose up -d`,
+porque `up` solo no reconstruye.
