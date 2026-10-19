@@ -1,4 +1,5 @@
 import type { CategoryKey } from '@/slices/mission/domain/categories';
+import type { MethodKey } from '@/slices/mission/domain/methods';
 import type { MissionInput } from '@/slices/mission/application/commands';
 import { it, uid } from '@/slices/mission/domain/ids';
 
@@ -11,6 +12,8 @@ export interface MissionDraft {
   x: number | null;
   y: number | null;
   items: { id: string; text: string }[];
+  /** Optional learning-method tag (see methods.ts). Not used by rewards. */
+  method?: MethodKey;
 }
 
 /** Fresh draft for openCreateModal: `at` = optional world coords (rounded like legacy). */
@@ -22,6 +25,7 @@ export function emptyDraft(at?: { x: number; y: number } | null): MissionDraft {
     x: at ? Math.round(at.x) : null,
     y: at ? Math.round(at.y) : null,
     items: [it('')],
+    method: undefined,
   };
 }
 
@@ -62,6 +66,7 @@ export function validateDraft(draft: MissionDraft): DraftValidation {
       y: draft.y,
       respect: draft.respect,
       items,
+      method: draft.method,
     },
   };
 }

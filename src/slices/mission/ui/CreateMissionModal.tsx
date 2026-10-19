@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import type { CategoryKey } from '@/slices/mission/domain/categories';
+import { METHODS, type MethodKey } from '@/slices/mission/domain/methods';
 import type { MissionInput } from '@/slices/mission/application/commands';
 import { uid } from '@/slices/mission/domain/ids';
 
@@ -13,6 +14,12 @@ const CATEGORY_OPTIONS: { key: CategoryKey; label: string }[] = [
   { key: 'work', label: '💼 Work' },
   { key: 'health', label: '❤️ Health' },
 ];
+
+/** Learning-method `<option>` labels, derived from the METHODS map. */
+const METHOD_OPTIONS = (Object.keys(METHODS) as MethodKey[]).map((key) => ({
+  key,
+  label: `${METHODS[key].icon} ${METHODS[key].label}`,
+}));
 
 export interface CreateMissionModalProps {
   /** Legacy backdrop visibility — false while "Pick on map" crosshair mode is active. */
@@ -142,6 +149,24 @@ export function CreateMissionModal({
               onChange={(e) => patch({ respect: e.target.value })}
             />
           </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="f-method">Learning method</label>
+          <select
+            id="f-method"
+            value={draft.method ?? ''}
+            onChange={(e) =>
+              patch({ method: (e.target.value || undefined) as MethodKey | undefined })
+            }
+          >
+            <option value="">— none —</option>
+            {METHOD_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="field">

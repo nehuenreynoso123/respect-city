@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { WORLD_H, WORLD_W, type Point } from '@/slices/map/domain/view';
 import { CityMap } from '@/slices/map/ui/CityMap';
+import { AuthScreen } from '@/slices/auth/ui/AuthScreen';
 import type { MissionInput } from '@/slices/mission/application/commands';
 import type { Filter } from '@/slices/mission/application/state';
 import { categoryOf } from '@/slices/mission/domain/categories';
@@ -26,7 +27,19 @@ const FALLBACK_LOCATION: Point = { x: 1200, y: 800 };
  * pick mode, map tap → create modal).
  */
 export default function App() {
-  const { state, dispatch, sfx, celebration, hideCelebration } = useApp();
+  const {
+    state,
+    dispatch,
+    sfx,
+    celebration,
+    hideCelebration,
+    auth,
+    login,
+    register,
+    logout,
+    notice,
+    dismissNotice,
+  } = useApp();
 
   // Legacy `ui` flags (non-persisted).
   const [drawerOpen, setDrawerOpen] = useState(false); // #mission-list.open
@@ -182,6 +195,20 @@ export default function App() {
 
   /* --- Render ------------------------------------------------------------ */
 
+  // Session gate: a stored token is validated before the city is shown.
+  if (auth === 'loading') {
+    return <div id="splash">LOADING RESPECT CITY…</div>;
+  }
+
+  if (auth === 'guest') {
+    return (
+      <>
+        <AuthScreen onLogin={login} onRegister={register} />
+        <NoticeBar notice={notice} onDismiss={dismissNotice} />
+      </>
+    );
+  }
+
   return (
     <>
       <HUD
@@ -190,7 +217,10 @@ export default function App() {
         onToggleSound={handleToggleSound}
         onToggleList={handleToggleList}
         onNewMission={handleNewMission}
+        onLogout={logout}
       />
+
+      <NoticeBar notice={notice} onDismiss={dismissNotice} />
 
       <div id="app">
         <MissionList
@@ -232,5 +262,23 @@ export default function App() {
         onPickOnMap={handlePickOnMap}
       />
     </>
+  );
+}
+
+export interface NoticeBarProps {
+  notice: string | null;
+  onDismiss: () => void;
+}
+
+/** Small dismissible bar for transient session/sync messages. */
+function NoticeBar({ notice, onDismiss }: NoticeBarProps) {
+  if (!notice) return null;
+  return (
+    <div id="notice-bar" role="status">
+      <span>{notice}</span>
+      <button className="notice-close" type="button" aria-label="Dismiss" onClick={onDismiss}>
+        ✕
+      </button>
+    </div>
   );
 }

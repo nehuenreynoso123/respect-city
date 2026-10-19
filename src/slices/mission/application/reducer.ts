@@ -42,6 +42,18 @@ export function reduce(state: AppState, command: AppCommand): ReduceResult {
         events: [{ type: 'soundToggled', enabled: !state.sound }],
       };
 
+    case 'replaceState':
+      // Authoritative sync: adopt the server slice but keep local-only UI state
+      // (restriction 8 — the open panel + filter survive a sync).
+      return {
+        state: {
+          ...command.state,
+          selectedId: state.selectedId,
+          filter: state.filter,
+        },
+        events: [],
+      };
+
     default: {
       const unknown: never = command;
       throw new Error(`Unknown command: ${JSON.stringify(unknown)}`);

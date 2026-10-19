@@ -48,6 +48,7 @@ export function createMission(state: AppState, input: MissionInput): ReduceResul
     y: input.y,
     respect,
     items,
+    method: input.method,
   };
   return { state: { ...state, missions: [...state.missions, mission] }, events: [] };
 }

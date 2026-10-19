@@ -9,25 +9,34 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 
+import { ApiError } from '@/shared/http/ApiError';
 import { WebAudioSfxAdapter } from '@/slices/audio/adapters/WebAudioSfxAdapter';
 import type { SfxPort } from '@/slices/audio/ports/SfxPort';
-import { LocalStorageMissionRepository } from '@/slices/mission/adapters/LocalStorageMissionRepository';
+import { HttpAuthAdapter } from '@/slices/auth/adapters/HttpAuthAdapter';
+import type { AuthResponse, User } from '@/slices/auth/domain/types';
+import { HttpGameRepository } from '@/slices/mission/adapters/HttpGameRepository';
 import type { AppCommand } from '@/slices/mission/application/commands';
 import type { AppEvent } from '@/slices/mission/application/events';
-import { loadInitialState } from '@/slices/mission/application/load';
-import {
-  serializePersistedState,
-} from '@/slices/mission/application/persistence';
 import { reduce } from '@/slices/mission/application/reducer';
-import { persistedOf } from '@/slices/mission/application/state';
-import type { AppState } from '@/slices/mission/application/state';
-import { LocalStorageAdapter } from '@/slices/storage/adapters/LocalStorageAdapter';
+import { freshAppState, persistedOf } from '@/slices/mission/application/state';
+import type { AppState, PersistedState } from '@/slices/mission/application/state';
+
+import { isLocalCommand, mutationOf } from './pipeline';
+
+/**
+ * Backend base URL. Empty in the browser so requests are same-origin `/api/*`
+ * (Vite dev proxy forwards them to the backend, see vite.config.ts); tests pass
+ * an absolute base directly to the adapters.
+ */
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
 
 /** RESPECT+ celebration payload derived from `missionCompleted` events. */
 export interface RespectCelebration {
   respect: number;
   firstGrant: boolean;
 }
+
+export type AuthStatus = 'loading' | 'guest' | 'authenticated';
 
 export interface AppContextValue {
   state: AppState;
@@ -37,6 +46,15 @@ export interface AppContextValue {
   /** Non-null while the RESPECT+ overlay is showing. */
   celebration: RespectCelebration | null;
   hideCelebration: () => void;
+  /** Session gate: 'loading' while the session cookie is validated. */
+  auth: AuthStatus;
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  /** Transient user-facing error/info message. */
+  notice: string | null;
+  dismissNotice: () => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -52,22 +70,22 @@ export interface AppProviderProps {
 }
 
 /**
- * Global store: ONE `useReducer` over the pure mission reducer (which folds
- * the player reducer for rewards), adapters injected here, boot via
- * `loadInitialState` (legacy `load()`) and persistence as an effect that
- * writes only when the persisted slice actually changed (legacy `save()`
- * ran on mutations only — selection/filter never touched storage).
+ * Composition root: builds the HTTP adapters once, owns the pure mission
+ * reducer, gates the app behind a validated session, and runs the optimistic
+ * reconciliation pipeline for mutation commands (dispatch locally, then adopt
+ * the authoritative server state or roll back). The session is an httpOnly
+ * cookie the client never reads.
  */
 export function AppProvider({ children }: AppProviderProps) {
-  const [repo] = useState(
-    () => new LocalStorageMissionRepository(new LocalStorageAdapter()),
-  );
+  // --- Adapters (built once) ---------------------------------------------
+  const [authRepo] = useState(() => new HttpAuthAdapter(API_BASE));
+  const [repo] = useState(() => new HttpGameRepository(API_BASE));
 
   // Latest committed sound flag for the sfx gate (adapter takes a getter).
   const soundRef = useRef(true);
   const [sfx] = useState(() => new WebAudioSfxAdapter(() => soundRef.current));
 
-  // Reducer side-effect intents, consumed once per committed state.
+  // --- Reducer ------------------------------------------------------------
   const eventsRef = useRef<AppEvent[]>([]);
   const reducer = useCallback((current: AppState, command: AppCommand): AppState => {
     const result = reduce(current, command);
@@ -75,14 +93,26 @@ export function AppProvider({ children }: AppProviderProps) {
     return result.state;
   }, []);
 
-  const [state, dispatch] = useReducer(reducer, repo, loadInitialState);
+  const [state, rawDispatch] = useReducer(reducer, undefined, () => freshAppState());
+
+  // --- Session state ------------------------------------------------------
+  const [auth, setAuth] = useState<AuthStatus>('loading');
+  const [user, setUser] = useState<User | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const dismissNotice = useCallback(() => setNotice(null), []);
 
   const [celebration, setCelebration] = useState<RespectCelebration | null>(null);
   const hideCelebration = useCallback(() => setCelebration(null), []);
 
-  // Run reducer intents after commit (legacy wiring: check ticks, sound
-  // toggle chime, RESPECT+ overlay). soundRef is refreshed first so the
-  // adapter gates on the NEW flag (legacy chime only when turning ON).
+  // Pre-command snapshot source: the ref lags one render behind an optimistic
+  // dispatch, which is exactly what the pipeline needs for rollback and for
+  // reading the flag the reducer just flipped.
+  const latestStateRef = useRef(state);
+  useEffect(() => {
+    latestStateRef.current = state;
+  }, [state]);
+
+  // --- Reducer intents (sfx / celebration), unchanged from local-first -----
   useEffect(() => {
     soundRef.current = state.sound;
     const events = eventsRef.current;
@@ -104,20 +134,128 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   }, [state, sfx]);
 
-  // Persist only when the persisted slice changed. The first run records the
-  // boot blob: loadInitialState already saved it when data was seeded/merged
-  // (legacy load()/mergeRoutine guard), so we never rewrite on mount.
-  const lastPersistedRef = useRef<string | null>(null);
+  // --- Boot: validate the session cookie, then hydrate the state ----------
+  // The ref guard makes the effect idempotent under React StrictMode's dev
+  // double-invoke (the async boot runs once per provider instance).
+  const bootedRef = useRef(false);
   useEffect(() => {
-    const serialized = serializePersistedState(persistedOf(state));
-    if (lastPersistedRef.current === null) {
-      lastPersistedRef.current = serialized;
-      return;
+    if (bootedRef.current) return;
+    bootedRef.current = true;
+
+    void (async () => {
+      try {
+        const { user: me } = await authRepo.me();
+        const loaded = await repo.load();
+        setUser(me);
+        rawDispatch({ type: 'replaceState', state: loaded });
+        setAuth('authenticated');
+      } catch {
+        // A missing or expired session cookie is the normal "logged out"
+        // state, so any boot failure lands on the guest screen silently.
+        setAuth('guest');
+      }
+    })();
+  }, [authRepo, repo, rawDispatch]);
+
+  // --- Auth actions -------------------------------------------------------
+  const adoptSession = useCallback(
+    async (response: AuthResponse) => {
+      // The login/register response already set the httpOnly session cookie,
+      // so the follow-up load() travels with it. Only the authoritative state
+      // load can fail here, and that failure tears the half-session down.
+      setUser(response.user);
+      try {
+        const loaded = await repo.load();
+        rawDispatch({ type: 'replaceState', state: loaded });
+        setNotice(null);
+        setAuth('authenticated');
+      } catch (error) {
+        setUser(null);
+        setCelebration(null);
+        throw error;
+      }
+    },
+    [repo, rawDispatch],
+  );
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      // Rejections bubble to AuthScreen, which renders the message.
+      await adoptSession(await authRepo.login({ email, password }));
+    },
+    [authRepo, adoptSession],
+  );
+
+  const register = useCallback(
+    async (email: string, password: string) => {
+      await adoptSession(await authRepo.register({ email, password }));
+    },
+    [authRepo, adoptSession],
+  );
+
+  const logout = useCallback(async () => {
+    try {
+      await authRepo.logout();
+    } catch {
+      // Network failure: the local session is cleared anyway; the cookie
+      // expires server-side on its own.
     }
-    if (serialized === lastPersistedRef.current) return;
-    lastPersistedRef.current = serialized;
-    repo.save(persistedOf(state));
-  }, [state, repo]);
+    setUser(null);
+    setNotice(null);
+    // The guest subtree unmounts the overlay without running its auto-hide
+    // cleanup, so clear it here or the celebration resurfaces on next login.
+    setCelebration(null);
+    setAuth('guest');
+    // Clean slate for the next login; the guest screen hides the stale UI.
+    rawDispatch({ type: 'replaceState', state: persistedOf(freshAppState()) });
+  }, [authRepo, rawDispatch]);
+
+  // --- Dispatch: optimistic pipeline for mutations ------------------------
+  const dispatch = useCallback(
+    (command: AppCommand) => {
+      // Local-only and replaceState are applied directly, never sent.
+      if (isLocalCommand(command) || command.type === 'replaceState') {
+        rawDispatch(command);
+        return;
+      }
+
+      const snapshot = persistedOf(latestStateRef.current);
+
+      // Optimistic: existing reducer logic drives instant UI + sfx/celebration.
+      rawDispatch(command);
+
+      const plan = mutationOf(repo, command, snapshot);
+      if (!plan) return;
+
+      void plan
+        .run()
+        .then((serverState: PersistedState) => {
+          // Authoritative sync (no merge): adopt the server blob.
+          rawDispatch({ type: 'replaceState', state: serverState });
+        })
+        .catch((error: unknown) => {
+          if (error instanceof ApiError && error.code === 'unauthorized') {
+            // The cookie is gone or expired mid-session: fall back to guest.
+            setUser(null);
+            setCelebration(null);
+            setAuth('guest');
+            setNotice('Session expired. Please log in.');
+            return;
+          }
+          // Roll the optimistic change back to the pre-command snapshot and
+          // drop any celebration the optimistic reducer may have fired: the
+          // mutation failed, so a "reward" overlay would be a lie.
+          setCelebration(null);
+          rawDispatch({ type: 'replaceState', state: plan.snapshot });
+          setNotice(
+            error instanceof ApiError
+              ? error.message
+              : 'Something went wrong. Please try again.',
+          );
+        });
+    },
+    [rawDispatch, repo],
+  );
 
   const value: AppContextValue = {
     state,
@@ -125,6 +263,13 @@ export function AppProvider({ children }: AppProviderProps) {
     sfx,
     celebration,
     hideCelebration,
+    auth,
+    user,
+    login,
+    register,
+    logout,
+    notice,
+    dismissNotice,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
