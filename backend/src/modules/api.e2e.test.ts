@@ -77,7 +77,22 @@ function createHarness(): Harness {
   };
 }
 
-const auth = (token: string): { authorization: string } => ({ authorization: `Bearer ${token}` });
+/**
+ * Reads the session cookie a login/register response just issued. The client
+ * never sees the token; it only replays the opaque cookie the browser holds.
+ */
+function sessionCookieOf(res: { headers: Record<string, unknown> }): string {
+  const raw = res.headers['set-cookie'];
+  const header = Array.isArray(raw) ? raw[0] : raw;
+  const value = /rc_session=([^;]*)/.exec(String(header ?? ''));
+  expect(value?.[1], 'login/register must set the rc_session cookie').toBeTruthy();
+  return decodeURIComponent(value?.[1] ?? '');
+}
+
+/** Inject-option carrying the session cookie a browser would replay. */
+const cookie = (token: string): { cookies: { rc_session: string } } => ({
+  cookies: { rc_session: token },
+});
 
 async function registerUser(app: FastifyInstance, email: string): Promise<string> {
   const res = await app.inject({
@@ -86,13 +101,15 @@ async function registerUser(app: FastifyInstance, email: string): Promise<string
     payload: { email, password: 'password123' },
   });
   expect(res.statusCode).toBe(201);
-  return res.json().accessToken as string;
+  // The body carries the user alone; the token rides in the Set-Cookie header.
+  expect(Object.keys(res.json())).toEqual(['user']);
+  return sessionCookieOf(res);
 }
 
 /** Register + GET /api/state so the account aggregate exists (seeded). */
 async function registerAndSeed(app: FastifyInstance, email: string): Promise<string> {
   const token = await registerUser(app, email);
-  const res = await app.inject({ method: 'GET', url: '/api/state', headers: auth(token) });
+  const res = await app.inject({ method: 'GET', url: '/api/state', ...cookie(token) });
   expect(res.statusCode).toBe(200);
   return token;
 }
@@ -126,9 +143,10 @@ describe('api e2e', () => {
       payload: { email: 'a@example.com', password: 'password123' },
     });
     expect(login.statusCode).toBe(200);
-    const token = login.json().accessToken as string;
+    expect(Object.keys(login.json())).toEqual(['user']);
+    const token = sessionCookieOf(login);
 
-    const res = await app.inject({ method: 'GET', url: '/api/state', headers: auth(token) });
+    const res = await app.inject({ method: 'GET', url: '/api/state', ...cookie(token) });
     expect(res.statusCode).toBe(200);
     const state = res.json();
     expect(state.missions).toHaveLength(DEMO_AND_ROUTINE);
@@ -142,7 +160,7 @@ describe('api e2e', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/missions',
-      headers: auth(token),
+      ...cookie(token),
       payload: newMission,
     });
     expect(res.statusCode).toBe(201);
@@ -159,7 +177,7 @@ describe('api e2e', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/missions',
-      headers: auth(token),
+      ...cookie(token),
       payload: body,
     });
     expect(res.statusCode).toBe(400);
@@ -169,7 +187,7 @@ describe('api e2e', () => {
   it('surfaces use-case business errors with the front messages', async () => {
     const token = await registerAndSeed(app, 'a@example.com');
     const post = (payload: Record<string, unknown>) =>
-      app.inject({ method: 'POST', url: '/api/missions', headers: auth(token), payload });
+      app.inject({ method: 'POST', url: '/api/missions', ...cookie(token), payload });
 
     const missingTitle = await post({ ...newMission, title: '   ' });
     expect(missingTitle.statusCode).toBe(400);
@@ -198,12 +216,12 @@ describe('api e2e', () => {
     await app.inject({
       method: 'POST',
       url: '/api/missions',
-      headers: auth(token),
+      ...cookie(token),
       payload: newMission,
     });
 
     const toggle = () =>
-      app.inject({ method: 'POST', url: '/api/missions/m1/items/a/toggle', headers: auth(token) });
+      app.inject({ method: 'POST', url: '/api/missions/m1/items/a/toggle', ...cookie(token) });
 
     const first = await toggle();
     expect(first.statusCode).toBe(200);
@@ -224,14 +242,14 @@ describe('api e2e', () => {
     await app.inject({
       method: 'POST',
       url: '/api/missions',
-      headers: auth(token),
+      ...cookie(token),
       payload: newMission,
     });
 
     const res = await app.inject({
       method: 'DELETE',
       url: '/api/missions/m1',
-      headers: auth(token),
+      ...cookie(token),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().missions.some((m: Mission) => m.id === 'm1')).toBe(false);
@@ -242,16 +260,17 @@ describe('api e2e', () => {
     const res = await app.inject({
       method: 'PATCH',
       url: '/api/sound',
-      headers: auth(token),
+      ...cookie(token),
       payload: { enabled: false },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().sound).toBe(false);
   });
 
-  it('rejects every protected route without a token', async () => {
+  it('rejects every protected route without a session cookie', async () => {
     const routes: { method: 'GET' | 'POST' | 'DELETE' | 'PATCH'; url: string }[] = [
       { method: 'GET', url: '/api/state' },
+      { method: 'GET', url: '/api/me' },
       { method: 'POST', url: '/api/missions' },
       { method: 'DELETE', url: '/api/missions/m1' },
       { method: 'POST', url: '/api/missions/m1/items/a/toggle' },
@@ -267,18 +286,18 @@ describe('api e2e', () => {
   it('isolates accounts: user B never sees user A data', async () => {
     const tokenA = await registerAndSeed(app, 'a@example.com');
     const aState = (
-      await app.inject({ method: 'GET', url: '/api/state', headers: auth(tokenA) })
+      await app.inject({ method: 'GET', url: '/api/state', ...cookie(tokenA) })
     ).json();
     await app.inject({
       method: 'POST',
       url: '/api/missions',
-      headers: auth(tokenA),
+      ...cookie(tokenA),
       payload: { ...newMission, id: 'a-created', title: 'A only' },
     });
 
     const tokenB = await registerAndSeed(app, 'b@example.com');
     const bState = (
-      await app.inject({ method: 'GET', url: '/api/state', headers: auth(tokenB) })
+      await app.inject({ method: 'GET', url: '/api/state', ...cookie(tokenB) })
     ).json();
 
     expect(bState.missions).toHaveLength(DEMO_AND_ROUTINE);

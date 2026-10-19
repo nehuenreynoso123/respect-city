@@ -4,15 +4,12 @@ import type { AuthResponse, User } from '../domain/types';
 import type { AuthRepository, Credentials } from '../ports/AuthRepository';
 
 /**
- * fetch-based AuthRepository. `getToken` is read on every call (not captured),
- * so a token saved right after login is attached to the next request without
- * rebuilding the adapter.
+ * fetch-based AuthRepository. The session lives entirely in an httpOnly
+ * cookie, so every request is sent `credentials: 'same-origin'` and the app
+ * never sees or attaches the token itself.
  */
 export class HttpAuthAdapter implements AuthRepository {
-  constructor(
-    private readonly baseUrl: string,
-    private readonly getToken: () => string | null,
-  ) {}
+  constructor(private readonly baseUrl: string) {}
 
   register(input: Credentials): Promise<AuthResponse> {
     return this.post('/api/auth/register', input);
@@ -24,24 +21,28 @@ export class HttpAuthAdapter implements AuthRepository {
 
   async me(): Promise<{ user: User }> {
     const response = await fetch(`${this.baseUrl}/api/me`, {
-      headers: this.authHeaders(),
+      credentials: 'same-origin',
     });
     if (!response.ok) throw await apiErrorFrom(response);
     return (await response.json()) as { user: User };
+  }
+
+  async logout(): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'same-origin',
+    });
+    if (!response.ok) throw await apiErrorFrom(response);
   }
 
   private async post(path: string, body: Credentials): Promise<AuthResponse> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify(body),
     });
     if (!response.ok) throw await apiErrorFrom(response);
     return (await response.json()) as AuthResponse;
-  }
-
-  private authHeaders(): Record<string, string> {
-    const token = this.getToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
   }
 }

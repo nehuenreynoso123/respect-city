@@ -28,6 +28,10 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://respect:respect@postgres:5432/respect_city}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-in-production}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      # Session cookie `Secure` flag. The bundled frontend serves plain HTTP on
+      # :8080, so a Secure cookie would be dropped by the browser: keep it false
+      # until the stack sits behind TLS, then set COOKIE_SECURE=true.
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     ports:
       - "3000:3000"
     depends_on:
