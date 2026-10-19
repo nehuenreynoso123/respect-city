@@ -162,13 +162,37 @@ config; las borraciones cuentan) → supera 400.
 
 ## Estado
 
-Feature cerrada en la rama `feat/auth-hardening` (3 commits, pusheada a origin).
-Gates finales: front 14 files/93 tests, backend 19 files/95 tests, y el flujo de
-cookie verificado end-to-end contra el stack de docker.
-Pendiente para el usuario: decidir si abre PR (slices propuestos: `d210806` y
-`d2e2ff7`+`4e1a17a`, base `feat/backend-core` porque esa rama todavía no está mergeada
-en `master`; el segundo slice queda sobre las 400 líneas → necesita `size:exception`).
+**Feature cerrada y mergeada a `master`** (árbol de `master` idéntico al tip verificado:
+`git diff origin/master f4fac43` da vacío).
+
+Entrega en dos PRs:
+
+- **#14** — base `feat/backend-core`, los 4 commits de la feature, diff limpio. Mergeado
+  como `f9a59f8`.
+- **#13** — base `master`, 32 commits. Se abrió por error contra `master` mientras
+  `feat/backend-core` seguía sin mergear, así que además de esta feature arrastró las
+  tres que estaban estacionadas en esa rama (`dockerize-stack`, `learning-methods`,
+  `map-redesign`). Mergeado como `7601911`. No se perdió nada, pero el diff incluía el
+  proyecto entero y el review perdió foco.
+- **#15** — base `master`, `feat/backend-core` → master. Redundante: el contenido de esa
+  rama ya había entrado con #13, así que no agrega cambios de archivos (mergeado como
+  `8b48944`).
+
+Gates finales sobre el árbol mergeado: front 14 files/93 tests, backend 19 files/95
+tests, y el flujo de cookie verificado end-to-end contra el stack de docker con `curl`
+(register 201 + `Set-Cookie` httpOnly, `/api/me` 200 con cookie y 401 sin cookie,
+logout con `Max-Age=0`).
+
+**Lección de entrega**: una rama que cuelga de una base sin mergear debe apuntar su PR a
+**esa base**, nunca a `master`. El resto de la cadena se encadena PR por PR (como hizo
+`#14`) y GitHub retargetea solo cuando la base se mergea.
+
 Recordatorio de deploy: el stack de compose sirve HTTP plano, así que `COOKIE_SECURE=true`
 recién cuando haya TLS delante — si no, el browser descarta la cookie. Y después de
+cualquier cambio en `nginx.conf`/backend: `docker compose build && docker compose up -d`,
+porque `up` solo no reconstruye.
+
+Recordatorio de deploy: el stack de compose sirve HTTP plano, asi que `COOKIE_SECURE=true`
+recien cuando haya TLS delante — si no, el browser descarta la cookie. Y despues de
 cualquier cambio en `nginx.conf`/backend: `docker compose build && docker compose up -d`,
 porque `up` solo no reconstruye.
