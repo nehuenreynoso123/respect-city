@@ -1,7 +1,6 @@
 import { emptyPlayer } from '@/slices/player/domain/player';
 import type { Player } from '@/slices/player/domain/player';
 
-import { seedMissions } from '../routine';
 import type { Mission } from '../domain/types';
 
 /** Exact shape written by the legacy save() to localStorage. */
@@ -34,7 +33,7 @@ export function persistedOf(state: AppState): PersistedState {
 export function freshAppState(): AppState {
   return {
     player: emptyPlayer(),
-    missions: seedMissions(),
+    missions: [],
     sound: true,
     routineSeeded: 0,
     selectedId: null,
