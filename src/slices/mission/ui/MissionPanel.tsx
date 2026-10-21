@@ -3,6 +3,7 @@ import { Checkbox } from '@/shared/ui/Checkbox';
 import { categoryOf } from '@/slices/mission/domain/categories';
 import { methodOf } from '@/slices/mission/domain/methods';
 import type { Mission } from '@/slices/mission/domain/types';
+import { Stopwatch } from '@/slices/timer/ui/Stopwatch';
 
 export interface MissionPanelProps {
   /** Selected mission; null → closed (legacy placeholder content + aria-hidden). */
@@ -68,6 +69,8 @@ export function MissionPanel({ mission, onToggleItem, onDelete, onClose }: Missi
           {mission ? `${checked} / ${total} completed` : '0 / 0'}
         </div>
       </div>
+
+      {mission && <Stopwatch missionId={mission.id} />}
 
       <ul id="panel-items">
         {mission?.items.map((item) => (
