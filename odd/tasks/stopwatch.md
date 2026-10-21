@@ -102,11 +102,13 @@ Forecast: **~250–380 líneas** → por debajo de 400.
   `*.test.ts`), convención de slices (`domain` / `application` / `ui` /
   `adapters`), auth por cookie httpOnly (el scope del timer es `user.id`).
 - ✅ **T1–T4 completos** (2026-10-21). Implementación delegada a un writer.
-  4 work-unit commits en `feat/stopwatch` (sin push, sin PR):
+  6 work-unit commits en `feat/stopwatch`:
   - `0f60c8a` `feat(timer): add stopwatch domain model and per-mission timer state`
   - `b14ddf6` `feat(timer): add stopwatch provider, hook and UI control`
   - `b691f9d` `feat(ui): wire stopwatch into mission panel and mission list`
   - `a57cded` `docs(odd): add stopwatch feature doc`
+  - `2b8c9fa` `docs(odd): close stopwatch with verification evidence`
+  - `b073465` `docs(odd): link stopwatch PR #16`
 - ✅ Verificación (observada por el orquestador, no solo por el writer):
   `npm run typecheck` PASS · `npm test` **124 tests / 17 files** PASS
   (baseline 93/14 → **+31 tests**, solo lógica pura) · `npm run build` PASS.
@@ -114,6 +116,13 @@ Forecast: **~250–380 líneas** → por debajo de 400.
   (`executable_change` en `src/app/App.tsx`). RDD off → verificación ordinaria:
   writer self-verification + re-run del orquestador de los 3 gates.
 - ✅ `backend/` intacto, cero cambios de API, cero dependencias nuevas.
+- ✅ **PR #16 mergeado a `master`** (merge commit `19b82bf`,
+  https://github.com/nehuenreynoso123/respect-city/pull/16, label `type:feature`).
+  Verificación post-merge: `git merge-base --is-ancestor b073465 origin/master`
+  OK y `git diff origin/master b073465` vacío → no se perdió nada.
+  Rama `feat/stopwatch` borrada en local y remoto (housekeeping del repo).
+- ✅ Smoke manual verificado por el usuario en el navegador (play / pause /
+  reset / persistencia tras recargar).
 
 ## Notas de implementación
 
@@ -133,11 +142,10 @@ Forecast: **~250–380 líneas** → por debajo de 400.
 
 ## Next steps
 
-- Verificación manual en el navegador (el repo no tiene tests de DOM):
-  `npm run dev` → abrir una misión → Play / Pause / Reset → recargar y
-  comprobar que el tiempo persiste.
-- PR abierto contra `master`: https://github.com/nehuenreynoso123/respect-city/pull/16
-  (label `type:feature`). El merge queda a criterio del usuario.
+- **Cerrada**: feature mergeada a `master` y doc updated con el registro del merge.
+- Opcional a futuro (no es parte de esta feature): persistir el tiempo en el
+  backend (columna + API) para tener histórico entre dispositivos. La versión
+  actual es deliberadamente front-only.
 - Nota: este repo no tiene issue-first workflow (sin `.github/`, sin label
   `status:approved`, cero issues), así que el PR no enlaza issue: sigue la
   convención real del repo (conventional commit en el título + `type:*`).
