@@ -13,6 +13,7 @@ import { MissionPanel } from '@/slices/mission/ui/MissionPanel';
 import { RespectOverlay } from '@/slices/mission/ui/RespectOverlay';
 import { emptyDraft, type MissionDraft } from '@/slices/mission/ui/missionDraft';
 import { HUD } from '@/slices/player/ui/HUD';
+import { TimerProvider } from '@/slices/timer/application/TimerProvider';
 
 import { useApp } from './store/AppProvider';
 
@@ -34,6 +35,7 @@ export default function App() {
     celebration,
     hideCelebration,
     auth,
+    user,
     login,
     register,
     logout,
@@ -210,7 +212,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <TimerProvider scope={user?.id ?? 'anonymous'}>
       <HUD
         player={state.player}
         sound={state.sound}
@@ -261,7 +263,7 @@ export default function App() {
         onCancel={handleCancelModal}
         onPickOnMap={handlePickOnMap}
       />
-    </>
+    </TimerProvider>
   );
 }
 

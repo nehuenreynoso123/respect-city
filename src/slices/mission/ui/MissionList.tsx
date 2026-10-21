@@ -2,6 +2,8 @@ import type { Filter } from '@/slices/mission/application/state';
 import { categoryOf } from '@/slices/mission/domain/categories';
 import { missionDone } from '@/slices/mission/domain/missionDone';
 import type { Mission } from '@/slices/mission/domain/types';
+import { useMissionTimer } from '@/slices/timer/application/useMissionTimer';
+import { formatElapsed } from '@/slices/timer/domain/timer';
 
 /** Legacy filter chips (index.html:542-544). */
 const FILTERS: { key: Filter; label: string }[] = [
@@ -92,6 +94,7 @@ export function MissionList({
                     <span>
                       {checked}/{m.items.length}
                     </span>
+                    <MissionTimeChip missionId={m.id} />
                   </div>
                 </div>
                 {done && <div className="mc-check">✓</div>}
@@ -102,4 +105,15 @@ export function MissionList({
       </div>
     </aside>
   );
+}
+
+/**
+ * Time accumulated by a mission. It is a child component (not inline in the
+ * card map) because it needs the stopwatch hook, which cannot run inside a
+ * loop. Nothing is rendered until some time was accumulated.
+ */
+function MissionTimeChip({ missionId }: { missionId: string }) {
+  const { elapsedMs } = useMissionTimer(missionId);
+  if (elapsedMs <= 0) return null;
+  return <span className="mc-time">⏱ {formatElapsed(elapsedMs)}</span>;
 }
