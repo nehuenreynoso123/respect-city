@@ -136,5 +136,8 @@ Forecast: **~250–380 líneas** → por debajo de 400.
 - Verificación manual en el navegador (el repo no tiene tests de DOM):
   `npm run dev` → abrir una misión → Play / Pause / Reset → recargar y
   comprobar que el tiempo persiste.
-- Decisión del usuario: push de `feat/stopwatch` y apertura de PR contra
-  `master` (no se hizo push ni PR).
+- PR abierto contra `master`: https://github.com/nehuenreynoso123/respect-city/pull/16
+  (label `type:feature`). El merge queda a criterio del usuario.
+- Nota: este repo no tiene issue-first workflow (sin `.github/`, sin label
+  `status:approved`, cero issues), así que el PR no enlaza issue: sigue la
+  convención real del repo (conventional commit en el título + `type:*`).
