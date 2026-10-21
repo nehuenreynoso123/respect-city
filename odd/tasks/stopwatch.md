@@ -13,7 +13,7 @@ dedicado a cada tarea**, no gamificar ni agregar recompensas.
 ## Problema / Por qué
 
 Hoy el juego mide progreso (items marcados, EXP, coins) pero no effort. El
-usuario quiere saber cuánto tiempo le dedication a cada misión para poder
+usuario quiere saber cuánto tiempo le dedico a cada misión para poder
 planificar y comparar bloques de trabajo (la rutina ya define bloques de
 30–90 min).
 
@@ -70,13 +70,13 @@ Decisiones de producto (2026-10-21):
 
 ## Tareas
 
-- [ ] **T1 — Dominio + estado puro**: `domain/timer.ts`, `application/timers.ts`,
+- [x] **T1 — Dominio + estado puro**: `domain/timer.ts`, `application/timers.ts`,
       `adapters/localStorageTimerStore.ts` + tests (`timer.test.ts`).
-- [ ] **T2 — Provider + hook + UI**: `TimerProvider.tsx`, `useMissionTimer.ts`,
+- [x] **T2 — Provider + hook + UI**: `TimerProvider.tsx`, `useMissionTimer.ts`,
       `ui/Stopwatch.tsx` + estilos en `styles.css`.
-- [ ] **T3 — Wiring**: `MissionPanel` (cronómetro de la misión abierta) +
+- [x] **T3 — Wiring**: `MissionPanel` (cronómetro de la misión abierta) +
       `MissionList` (chip de tiempo acumulado) + `App.tsx` (mount del provider).
-- [ ] **T4 — Verificación**: typecheck + tests + build en verde; cierre del doc.
+- [x] **T4 — Verificación**: typecheck + tests + build en verde; cierre del doc.
 
 ## Acceptance criteria
 
@@ -101,3 +101,40 @@ Forecast: **~250–380 líneas** → por debajo de 400.
   `styles.css` (paleta neon), `vite.config.ts` (Vitest `node`, solo
   `*.test.ts`), convención de slices (`domain` / `application` / `ui` /
   `adapters`), auth por cookie httpOnly (el scope del timer es `user.id`).
+- ✅ **T1–T4 completos** (2026-10-21). Implementación delegada a un writer.
+  4 work-unit commits en `feat/stopwatch` (sin push, sin PR):
+  - `0f60c8a` `feat(timer): add stopwatch domain model and per-mission timer state`
+  - `b14ddf6` `feat(timer): add stopwatch provider, hook and UI control`
+  - `b691f9d` `feat(ui): wire stopwatch into mission panel and mission list`
+  - `a57cded` `docs(odd): add stopwatch feature doc`
+- ✅ Verificación (observada por el orquestador, no solo por el writer):
+  `npm run typecheck` PASS · `npm test` **124 tests / 17 files** PASS
+  (baseline 93/14 → **+31 tests**, solo lógica pura) · `npm run build` PASS.
+  `gentle-ai review assess --base-ref master` → **medium**
+  (`executable_change` en `src/app/App.tsx`). RDD off → verificación ordinaria:
+  writer self-verification + re-run del orquestador de los 3 gates.
+- ✅ `backend/` intacto, cero cambios de API, cero dependencias nuevas.
+
+## Notas de implementación
+
+- El reloj se deriva del wall clock (`elapsedMs` congelado + `runningSince`),
+  nunca de un contador que tickea: sobrevive al reload y no depende de que el
+  interval corra en tiempo real.
+- Un solo cronómetro corriendo a la vez (`playTimer` pausa los demás).
+- El tick vive en el hook (`useMissionTimer`): un cronómetro detenido no
+  re-renderiza nada y solo el que corre tickea (1 Hz).
+- Persistencia en `localStorage` con scope por usuario
+  (`rc-timers:v1:<userId>`); el provider no escribe antes de cargar el scope
+  (si no, el primer render pisaba el mapa guardado con `{}`).
+- El chip de tiempo de la lista es un componente hijo: los hooks no pueden
+  ejecutarse dentro de un `.map`.
+- TypeScript 7 no narrowea con un helper `boolean` (`isRunning`), por eso
+  `elapsedOf` captura `runningSince` en una const local.
+
+## Next steps
+
+- Verificación manual en el navegador (el repo no tiene tests de DOM):
+  `npm run dev` → abrir una misión → Play / Pause / Reset → recargar y
+  comprobar que el tiempo persiste.
+- Decisión del usuario: push de `feat/stopwatch` y apertura de PR contra
+  `master` (no se hizo push ni PR).
