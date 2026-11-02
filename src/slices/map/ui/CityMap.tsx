@@ -25,8 +25,9 @@ export interface CityMapProps {
  * Interactive synthwave city map. Original artwork (not derived from any game
  * asset) shaped after the Vice City layout everyone recognises: two landmasses
  * split by a central bay, a long beach island on the east with the ocean
- * beyond, and a small mansion island (Starfish-like) in the middle of the bay.
- * Everything lives in the `2400×1600` world that the camera math assumes.
+ * beyond, and three islands in the bay (Starfish-like mansions, a golf course
+ * and a film-studio key). Everything lives in the `2400×1600` world that the
+ * camera math assumes.
  */
 export function CityMap({
   markers,
@@ -133,6 +134,49 @@ export function CityMap({
             strokeOpacity=".7"
           />
 
+          {/* === LEAF LINKS — golf island in the north bay === */}
+          <path
+            d="M1380 300
+                 C1395 240 1470 215 1540 240
+                 C1610 265 1625 335 1595 385
+                 C1560 442 1470 445 1418 402
+                 C1385 375 1365 340 1380 300 Z"
+            fill="url(#land)"
+            stroke="#3dff8a"
+            strokeWidth="4"
+            strokeOpacity=".6"
+          />
+          {/* Fairways + flags */}
+          <g fill="#3dff8a" fillOpacity=".1" stroke="#3dff8a" strokeOpacity=".35" strokeWidth="2">
+            <ellipse cx="1430" cy="292" rx="48" ry="30" />
+            <ellipse cx="1546" cy="322" rx="42" ry="26" />
+          </g>
+          <g stroke="#ffd700" strokeWidth="3" strokeLinecap="round" fill="#ffd700">
+            <path d="M1456 266 v-28" />
+            <path d="M1456 238 l15 7 -15 7 Z" />
+            <path d="M1572 300 v-26" />
+            <path d="M1572 274 l14 6 -14 6 Z" />
+          </g>
+
+          {/* === PRAWN ISLAND — film-studio key between mainland and Starfish === */}
+          <path
+            d="M1240 590
+                 C1250 545 1300 528 1355 540
+                 C1408 552 1428 585 1418 628
+                 C1406 678 1350 694 1296 680
+                 C1252 668 1230 630 1240 590 Z"
+            fill="url(#land)"
+            stroke="#00f3ff"
+            strokeWidth="4"
+            strokeOpacity=".6"
+          />
+          {/* Studio soundstages */}
+          <g fill="#00f3ff" fillOpacity=".1" stroke="#00f3ff" strokeOpacity=".3" strokeWidth="2">
+            <rect x="1272" y="556" width="52" height="34" rx="3" />
+            <rect x="1340" y="578" width="46" height="30" rx="3" />
+            <rect x="1298" y="622" width="58" height="28" rx="3" />
+          </g>
+
           {/* === VICE BEACH — long eastern island, ocean on its far side === */}
           <path
             d="M1920 250
@@ -166,6 +210,8 @@ export function CityMap({
             <line x1="1775" y1="840" x2="1808" y2="840" /> {/* starfish → beach */}
             <line x1="1080" y1="540" x2="1820" y2="430" /> {/* northern causeway */}
             <line x1="900" y1="1320" x2="1800" y2="1340" /> {/* southern causeway */}
+            <line x1="1160" y1="558" x2="1240" y2="588" /> {/* mainland → prawn */}
+            <line x1="1404" y1="560" x2="1470" y2="432" /> {/* prawn → leaf links */}
           </g>
           <g
             stroke="#ffd700"
@@ -177,6 +223,8 @@ export function CityMap({
             <line x1="1080" y1="540" x2="1820" y2="430" />
             <line x1="900" y1="1320" x2="1800" y2="1340" />
             <line x1="1120" y1="760" x2="1470" y2="820" />
+            <line x1="1160" y1="558" x2="1240" y2="588" />
+            <line x1="1404" y1="560" x2="1470" y2="432" />
           </g>
 
           {/* === DISTRICT LABELS === */}
@@ -194,9 +242,25 @@ export function CityMap({
             <text x="1000" y="560" fill="#00f3ff">
               DOWNTOWN
             </text>
+            {/* Vice Point (north tip of the beach island) */}
+            <ellipse cx="1978" cy="352" rx="150" ry="105" fill="#ff007f" fillOpacity=".06" />
+            <text x="1978" y="335" fill="#ff007f" fontSize="30" fillOpacity=".8">
+              VICE POINT
+            </text>
             {/* Vice Beach */}
             <text x="1965" y="470" fill="#ff007f">
               VICE BEACH
+            </text>
+            {/* Washington Beach (mid strip of the beach island) */}
+            <text
+              x="1985"
+              y="810"
+              fill="#ff007f"
+              fontSize="28"
+              letterSpacing="2"
+              fillOpacity=".75"
+            >
+              WASHINGTON BEACH
             </text>
             {/* Ocean Beach (south beach strip) */}
             <text x="1975" y="1120" fill="#ff007f" fontSize="36" fillOpacity=".75">
@@ -211,6 +275,14 @@ export function CityMap({
             <text x="520" y="360" fill="#00f3ff" fontSize="38" fillOpacity=".7">
               LITTLE HAITI
             </text>
+            {/* Viceport (industrial waterfront) */}
+            <text x="890" y="1128" fill="#ffd700" fontSize="30" fillOpacity=".7">
+              VICEPORT
+            </text>
+            {/* Escobar International (airport, south mainland) */}
+            <text x="420" y="1262" fill="#00f3ff" fontSize="26" fillOpacity=".7">
+              ESCOBAR INTL
+            </text>
             {/* The Docks */}
             <text x="700" y="1255" fill="#ffd700" fontSize="36" fillOpacity=".7">
               THE DOCKS
@@ -218,6 +290,21 @@ export function CityMap({
             {/* Starfish Isle */}
             <text x="1620" y="852" fill="#ffd700" fontSize="30" fillOpacity=".85">
               STARFISH ISLE
+            </text>
+            {/* Leaf Links */}
+            <text x="1495" y="352" fill="#3dff8a" fontSize="26" fillOpacity=".8">
+              LEAF LINKS
+            </text>
+            {/* Prawn Island */}
+            <text
+              x="1330"
+              y="618"
+              fill="#00f3ff"
+              fontSize="22"
+              letterSpacing="2"
+              fillOpacity=".8"
+            >
+              PRAWN ISLAND
             </text>
           </g>
 
@@ -265,6 +352,24 @@ export function CityMap({
           <g fill="#ffd700" fillOpacity=".12" stroke="#ffd700" strokeOpacity=".3" strokeWidth="2">
             <rect x="1580" y="800" width="60" height="46" rx="4" />
             <rect x="1660" y="835" width="52" height="40" rx="4" />
+          </g>
+
+          {/* === ESCOBAR INTL: runway (south mainland) === */}
+          <g
+            transform="translate(420,1300) rotate(-8)"
+            stroke="#00f3ff"
+            strokeOpacity=".38"
+            strokeWidth="3"
+            strokeLinecap="round"
+          >
+            <line x1="-110" y1="0" x2="110" y2="0" />
+            <line x1="-110" y1="16" x2="110" y2="16" strokeDasharray="16 14" />
+          </g>
+
+          {/* === VICEPORT: warehouses === */}
+          <g fill="#ffd700" fillOpacity=".1" stroke="#ffd700" strokeOpacity=".28" strokeWidth="2">
+            <rect x="820" y="1150" width="70" height="40" rx="3" />
+            <rect x="905" y="1165" width="54" height="34" rx="3" />
           </g>
 
           {/* PALMS (simple stylised) */}
