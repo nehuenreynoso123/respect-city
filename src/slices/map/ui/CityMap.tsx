@@ -1,5 +1,6 @@
 import { useEffect, type CSSProperties } from 'react';
 
+import { ExtrudedCity } from './ExtrudedCity';
 import { useMapCamera } from '../application/useMapCamera';
 import { markerLayer, type MapMarker } from '../domain/markers';
 import { toWorld as toWorldDomain, type Point } from '../domain/view';
@@ -107,6 +108,7 @@ export function CityMap({
 
           {/* === MAINLAND (west + centre): Downtown, Little Havana, Little Haiti === */}
           <path
+            className="landmass"
             d="M150 320
                  C210 150 520 120 780 210
                  C1010 285 1150 355 1200 505
@@ -124,6 +126,7 @@ export function CityMap({
 
           {/* === STARFISH ISLE — mansion island in the middle of the bay === */}
           <ellipse
+            className="landmass"
             cx="1620"
             cy="840"
             rx="165"
@@ -136,6 +139,7 @@ export function CityMap({
 
           {/* === LEAF LINKS — golf island in the north bay === */}
           <path
+            className="landmass"
             d="M1380 300
                  C1395 240 1470 215 1540 240
                  C1610 265 1625 335 1595 385
@@ -160,6 +164,7 @@ export function CityMap({
 
           {/* === PRAWN ISLAND — film-studio key between mainland and Starfish === */}
           <path
+            className="landmass"
             d="M1240 590
                  C1250 545 1300 528 1355 540
                  C1408 552 1428 585 1418 628
@@ -170,15 +175,10 @@ export function CityMap({
             strokeWidth="4"
             strokeOpacity=".6"
           />
-          {/* Studio soundstages */}
-          <g fill="#00f3ff" fillOpacity=".1" stroke="#00f3ff" strokeOpacity=".3" strokeWidth="2">
-            <rect x="1272" y="556" width="52" height="34" rx="3" />
-            <rect x="1340" y="578" width="46" height="30" rx="3" />
-            <rect x="1298" y="622" width="58" height="28" rx="3" />
-          </g>
 
           {/* === VICE BEACH — long eastern island, ocean on its far side === */}
           <path
+            className="landmass"
             d="M1920 250
                  C2050 235 2145 325 2160 480
                  C2178 645 2165 800 2150 985
@@ -332,27 +332,8 @@ export function CityMap({
             <path d="M1900 330 C1932 560 1900 820 1882 1080 C1872 1235 1860 1320 1842 1382" />
           </g>
 
-          {/* === BUILDING BLOCKS: downtown (cyan) === */}
-          <g fill="#00f3ff" fillOpacity=".10" stroke="#00f3ff" strokeOpacity=".25" strokeWidth="2">
-            <rect x="980" y="600" width="90" height="70" rx="4" />
-            <rect x="1090" y="585" width="70" height="90" rx="4" />
-            <rect x="1180" y="620" width="95" height="62" rx="4" />
-            <rect x="1005" y="760" width="80" height="80" rx="4" />
-            <rect x="1120" y="785" width="110" height="65" rx="4" />
-          </g>
-          {/* === BUILDING BLOCKS: beach hotels (pink) === */}
-          <g fill="#ff007f" fillOpacity=".10" stroke="#ff007f" strokeOpacity=".25" strokeWidth="2">
-            <rect x="1930" y="500" width="90" height="60" rx="4" />
-            <rect x="2040" y="560" width="75" height="85" rx="4" />
-            <rect x="1905" y="640" width="100" height="55" rx="4" />
-            <rect x="1940" y="1030" width="90" height="70" rx="4" />
-            <rect x="2050" y="1090" width="80" height="90" rx="4" />
-          </g>
-          {/* === MANSIONS on Starfish Isle === */}
-          <g fill="#ffd700" fillOpacity=".12" stroke="#ffd700" strokeOpacity=".3" strokeWidth="2">
-            <rect x="1580" y="800" width="60" height="46" rx="4" />
-            <rect x="1660" y="835" width="52" height="40" rx="4" />
-          </g>
+          {/* === EXTRUDED BUILDINGS (2.5D) === */}
+          <ExtrudedCity />
 
           {/* === ESCOBAR INTL: runway (south mainland) === */}
           <g
@@ -364,12 +345,6 @@ export function CityMap({
           >
             <line x1="-110" y1="0" x2="110" y2="0" />
             <line x1="-110" y1="16" x2="110" y2="16" strokeDasharray="16 14" />
-          </g>
-
-          {/* === VICEPORT: warehouses === */}
-          <g fill="#ffd700" fillOpacity=".1" stroke="#ffd700" strokeOpacity=".28" strokeWidth="2">
-            <rect x="820" y="1150" width="70" height="40" rx="3" />
-            <rect x="905" y="1165" width="54" height="34" rx="3" />
           </g>
 
           {/* PALMS (simple stylised) */}
