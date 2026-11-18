@@ -65,7 +65,7 @@ El usuario eligió la opción 3 el 2026-11-17.
       `className="landmass"` en las cinco masas de tierra (el CSS de costa va en T3).
       Commit: `3ebd3b7` (`feat(map): render city buildings as extruded 2.5D prisms`).
 - [x] **T3 — Pulido + docs**: estilos en `styles.css` y nota en `README.md`.
-- [ ] **T4 — Verificación**: typecheck + tests + build en verde; cierre del doc
+- [x] **T4 — Verificación**: typecheck + tests + build en verde; cierre del doc
       con la evidencia observada.
 
 ## Criterios de aceptación
@@ -84,14 +84,19 @@ El usuario eligió la opción 3 el 2026-11-17.
 | `npx vitest run src/slices/map/domain/extrusion.test.ts` | ✅ verde | 1 archivo, 10 tests pasados (writer y spot check del orquestador) |
 | `npm run typecheck` | ✅ verde | `tsc --noEmit` sin diagnósticos (writer, T1 y T2) |
 | `npx vitest run` | ✅ verde | 18 archivos, 134 tests pasados (writer y spot check del orquestador, T2) |
-| `npm run build` | pendiente | al cierre de la feature |
+| `npm run build` | ✅ verde | `tsc --noEmit && vite build` — 58 módulos, `dist/` generado en 897 ms |
+| `npm test` | ✅ verde | 18 archivos, 134 tests pasados (gate final) |
+| `npm run typecheck` | ✅ verde | `tsc --noEmit` sin diagnósticos (gate final) |
 
 `gentle-ai review assess` sobre T1 y T2: `risk: medium` en ambos (RDD está off;
 no se abre review, solo se calibra la verificación; sin perfil small-model).
 
 ## Progreso / Próximo paso
 
-- **Estado**: T1 cerrado en `d9523a3`; T2 cerrado en `3ebd3b7` con 134 tests verdes.
-- **Próximo paso**: T3 — CSS de profundidad de costa (`.landmass`) y nota en `README.md`.
-- **Checklist de entrega**: Work units con commit convencional en `feat/map-2-5d`;
-  push y PR quedan a decisión del usuario.
+- **Estado**: **CERRADA**. T1 `d9523a3`, T2 `3ebd3b7`, T3 `400904b`. Todos los
+  criterios de aceptación verificados; sin dependencias nuevas ni cambios en backend.
+- **Checks omitidos**: ninguno de los planificados. No se ejecutó review nativo
+  porque RDD está apagado (decisión del usuario por defecto, no un error).
+- **Próximo paso (decisión del usuario)**: pushear `feat/map-2-5d` y abrir PR;
+  si se abre, la base es `feat/map-islands-neighborhoods` (aún no mergeada).
+- **Rollback**: revertir `400904b`, `3ebd3b7` y `d9523a3` en ese orden; no toca backend.
