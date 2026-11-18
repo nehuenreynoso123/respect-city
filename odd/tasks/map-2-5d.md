@@ -60,10 +60,11 @@ El usuario eligió la opción 3 el 2026-11-17.
       `domain/extrusion.test.ts`. Prisma con cara superior y dos laterales,
       vector de elevación constante, sin React ni DOM.
       Commit: `d9523a3` (`feat(map): add pure 2.5D extrusion geometry`).
-- [ ] **T2 — Capa visual**: `ui/ExtrudedCity.tsx` con los footprints actuales de
+- [x] **T2 — Capa visual**: `ui/ExtrudedCity.tsx` con los footprints actuales de
       downtown, hoteles, mansiones y galpones; reemplazo en `CityMap.tsx` y
-      profundidad de costa en las cinco masas de tierra.
-- [ ] **T3 — Pulido + docs**: estilos en `styles.css` y nota en `README.md`.
+      `className="landmass"` en las cinco masas de tierra (el CSS de costa va en T3).
+      Commit: `3ebd3b7` (`feat(map): render city buildings as extruded 2.5D prisms`).
+- [x] **T3 — Pulido + docs**: estilos en `styles.css` y nota en `README.md`.
 - [ ] **T4 — Verificación**: typecheck + tests + build en verde; cierre del doc
       con la evidencia observada.
 
@@ -81,16 +82,16 @@ El usuario eligió la opción 3 el 2026-11-17.
 | Comando | Resultado | Evidencia |
 | --- | --- | --- |
 | `npx vitest run src/slices/map/domain/extrusion.test.ts` | ✅ verde | 1 archivo, 10 tests pasados (writer y spot check del orquestador) |
-| `npm run typecheck` | ✅ verde | `tsc --noEmit` sin diagnósticos (writer) |
-| `npm test` | pendiente | suite completa, al cierre de la feature |
+| `npm run typecheck` | ✅ verde | `tsc --noEmit` sin diagnósticos (writer, T1 y T2) |
+| `npx vitest run` | ✅ verde | 18 archivos, 134 tests pasados (writer y spot check del orquestador, T2) |
 | `npm run build` | pendiente | al cierre de la feature |
 
-`gentle-ai review assess` sobre el diff de T1: `risk: medium` (RDD está off;
-no se abre review, solo se calibra la verificación).
+`gentle-ai review assess` sobre T1 y T2: `risk: medium` en ambos (RDD está off;
+no se abre review, solo se calibra la verificación; sin perfil small-model).
 
 ## Progreso / Próximo paso
 
-- **Estado**: T1 cerrado en `d9523a3`; geometría pura con 10 tests verdes y typecheck limpio.
-- **Próximo paso**: T2 — capa `ExtrudedCity.tsx`, reemplazo en `CityMap.tsx` y costa de las islas.
+- **Estado**: T1 cerrado en `d9523a3`; T2 cerrado en `3ebd3b7` con 134 tests verdes.
+- **Próximo paso**: T3 — CSS de profundidad de costa (`.landmass`) y nota en `README.md`.
 - **Checklist de entrega**: Work units con commit convencional en `feat/map-2-5d`;
   push y PR quedan a decisión del usuario.

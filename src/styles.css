@@ -186,6 +186,14 @@ button{ font-family:inherit; cursor:pointer; }
 }
 #city-map{ position:absolute; inset:0; width:2400px; height:1600px; }
 
+/* 2.5D depth: a hard offset shadow gives each island a raised coastline. */
+.landmass{
+  filter:drop-shadow(0 16px 0 rgba(2,5,20,.95))
+         drop-shadow(0 22px 18px rgba(0,0,0,.5));
+}
+/* The extruded prisms are decoration: taps belong to the viewport. */
+#extruded-city{ pointer-events:none; }
+
 /* --- Mission markers --- */
 #markers{ position:absolute; inset:0; }
 .marker{

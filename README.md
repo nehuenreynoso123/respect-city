@@ -11,7 +11,8 @@ as a React SPA backed by a Fastify + PostgreSQL API.
 ## Features
 
 - **Email + password accounts** with an httpOnly session cookie (the JWT never touches JavaScript).
-- **Interactive city map** (2400x1600 world) with pan, zoom, district labels and mission pins.
+- **Interactive city map** (2400x1600 world) with pan, zoom, district labels, mission pins
+  and 2.5D SVG depth: extruded buildings and raised coastlines rendered as plain SVG, no WebGL.
 - **Missions** with title, category, map location, respect value, optional learning method
   and a checklist. Created by tapping the map or from the header, edited from the side panel.
 - **Server-authoritative rewards**: completing a checklist grants EXP, coins and category
